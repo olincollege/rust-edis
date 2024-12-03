@@ -4,3 +4,19 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+
+[[bin]]
+name = "client"
+path = "src/client.rs"
+
+[[bin]]
+name = "info"
+path = "src/info.rs"
+
+[[bin]]
+name = "read_shard"
+path = "src/read_shard.rs"
+
+[[bin]]
+name = "write_shard"
+path = "src/write_shard.rs"
