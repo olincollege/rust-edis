@@ -19,6 +19,11 @@ pub trait MessagePayload {
     fn deserialize(buffer: &[u8]) -> Result<Self> where Self: Sized;
 }
 
+/// Layout of the Message as described in architecture
+/// | 4 bytes | 1 byte  | N bytes |
+/// | totlen  | msgtype | payload |
+/// Integers are always encoded in little-endian order
+/// totlen includes the length of all fields (including itself)
 pub struct Message<T: MessagePayload> {
     pub message_type: MessageType,
     pub message_payload: T

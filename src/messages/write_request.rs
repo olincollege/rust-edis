@@ -7,15 +7,15 @@ pub struct WriteRequest {
     pub value: Vec<u8>,
 }
 
+/// Layout of the WriteRequest as described in architecture
+/// | 2 bytes | N bytes | 2 bytes | M bytes |
+/// | keylen  |   key   | valuelen|  value  |
+/// Integers are are always encoded in little-endian order
 impl MessagePayload for WriteRequest {
     fn get_message_type(&self) -> MessageType {
         MessageType::Write
     }
-    /// Layout of the WriteRequest as described in architecture
-    /// | 2 bytes | N bytes | 2 bytes | M bytes |
-    /// | keylen  |   key   | valuelen|  value  |
-    /// Integers are are always encoded in little-endian order
-    fn serialize(&self) -> Result<Vec<u8>> {
+      fn serialize(&self) -> Result<Vec<u8>> {
         let mut buffer = Vec::new();
         let key_len = u16::try_from(self.key.len()).context("key length overflow")?;
         let value_len = u16::try_from(self.value.len()).context("value length overflow")?;
