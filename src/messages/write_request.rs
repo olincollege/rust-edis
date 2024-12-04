@@ -15,7 +15,7 @@ impl MessagePayload for WriteRequest {
     fn get_message_type(&self) -> MessageType {
         MessageType::Write
     }
-      fn serialize(&self) -> Result<Vec<u8>> {
+    fn serialize(&self) -> Result<Vec<u8>> {
         let mut buffer = Vec::new();
         let key_len = u16::try_from(self.key.len()).context("key length overflow")?;
         let value_len = u16::try_from(self.value.len()).context("value length overflow")?;
@@ -27,21 +27,39 @@ impl MessagePayload for WriteRequest {
     }
 
     fn deserialize(buffer: &[u8]) -> Result<Self> {
-        let key_len = u16::from_le_bytes(buffer.get(0..2).context("failed to get key length")?.try_into()?) as usize;
-        let key = buffer.get(2..2 + key_len).context("failed to get key")?.to_vec();
-        let value_len = u16::from_le_bytes(buffer.get(2+key_len..2+key_len+2).context("failed to get value length")?.try_into()?) as usize;
-        let value = buffer.get(2+key_len+2..2+key_len+2+value_len).context("failed to get value")?.to_vec();
+        let key_len = u16::from_le_bytes(
+            buffer
+                .get(0..2)
+                .context("failed to get key length")?
+                .try_into()?,
+        ) as usize;
+        let key = buffer
+            .get(2..2 + key_len)
+            .context("failed to get key")?
+            .to_vec();
+        let value_len = u16::from_le_bytes(
+            buffer
+                .get(2 + key_len..2 + key_len + 2)
+                .context("failed to get value length")?
+                .try_into()?,
+        ) as usize;
+        let value = buffer
+            .get(2 + key_len + 2..2 + key_len + 2 + value_len)
+            .context("failed to get value")?
+            .to_vec();
         Ok(WriteRequest { key, value })
     }
 }
-
 
 mod tests {
     use super::*;
 
     #[test]
     fn test_roundtrip_basic() {
-        let original = WriteRequest { key: b"key".to_vec(), value: b"value".to_vec() };
+        let original = WriteRequest {
+            key: b"key".to_vec(),
+            value: b"value".to_vec(),
+        };
         let serialized = original.serialize().unwrap();
         let deserialized = WriteRequest::deserialize(&serialized).unwrap();
         assert_eq!(original.key, deserialized.key);
