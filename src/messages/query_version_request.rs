@@ -17,4 +17,3 @@ impl MessagePayload for QueryVersionRequest {
         Ok(QueryVersionRequest {})
     }
 }
-
