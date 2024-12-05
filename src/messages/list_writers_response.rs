@@ -6,8 +6,8 @@ pub struct ListWritersResponse {
 }
 
 /// Layout of the ListWritersResponse
-/// | 18 bytes per writer | N writers |
-/// |     IP (16 bytes)    | Port (2 bytes) |
+/// | 2 bytes (writer count) | 18 bytes per writer | N writers |
+/// |       Writer Count      |     IP (16 bytes)   | Port (2 bytes) |
 impl MessagePayload for ListWritersResponse {
     fn get_message_type(&self) -> MessageType {
         MessageType::ListWriters
@@ -15,6 +15,11 @@ impl MessagePayload for ListWritersResponse {
 
     fn serialize(&self) -> Result<Vec<u8>> {
         let mut buffer = Vec::new();
+
+        // Add the number of writers (2 bytes, little-endian)
+        let count = u16::try_from(self.writers.len()).context("too many writers")?;
+        buffer.extend_from_slice(&count.to_le_bytes());
+
         for (ip, port) in &self.writers {
             buffer.extend_from_slice(ip); // Add 16-byte IP
             buffer.extend_from_slice(&port.to_le_bytes()); // Add 2-byte port in little-endian
