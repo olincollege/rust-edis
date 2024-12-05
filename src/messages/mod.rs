@@ -5,4 +5,6 @@ pub mod query_version_request;
 pub mod query_version_response;
 pub mod read_request;
 pub mod write_request;
+pub mod list_readers_response;
+pub mod list_writers_response;
 pub mod get_version_response;
