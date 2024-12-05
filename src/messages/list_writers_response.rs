@@ -2,6 +2,7 @@ use crate::messages::message::{MessagePayload, MessageType};
 use anyhow::{Context, Result};
 
 pub struct ListWritersResponse {
+    pub count: u16,                    // Number of writers
     pub writers: Vec<([u8; 16], u16)>, // Each writer is a tuple of 16-byte IP and 2-byte port
 }
 
@@ -17,20 +18,31 @@ impl MessagePayload for ListWritersResponse {
         let mut buffer = Vec::new();
 
         // Add the number of writers (2 bytes, little-endian)
-        let count = u16::try_from(self.writers.len()).context("too many writers")?;
-        buffer.extend_from_slice(&count.to_le_bytes());
+        buffer.extend_from_slice(&self.count.to_le_bytes());
 
+        // Serialize each writer
         for (ip, port) in &self.writers {
             buffer.extend_from_slice(ip); // Add 16-byte IP
             buffer.extend_from_slice(&port.to_le_bytes()); // Add 2-byte port in little-endian
         }
+
         Ok(buffer)
     }
 
     fn deserialize(buffer: &[u8]) -> Result<Self> {
-        let mut writers = Vec::new();
         let mut offset = 0;
-        while offset + 18 <= buffer.len() {
+
+        // Read the number of writers (2 bytes, little-endian)
+        let count = u16::from_le_bytes(
+            <[u8; 2]>::try_from(&buffer[offset..offset + 2])
+                .context("failed to get writer count")?,
+        );
+        offset += 2;
+
+        let mut writers = Vec::new();
+
+        // Deserialize each writer
+        for _ in 0..count {
             let ip = <[u8; 16]>::try_from(&buffer[offset..offset + 16])
                 .context("failed to get IP bytes")?;
             offset += 16;
@@ -44,7 +56,7 @@ impl MessagePayload for ListWritersResponse {
             writers.push((ip, port));
         }
 
-        Ok(ListWritersResponse { writers })
+        Ok(ListWritersResponse { count, writers })
     }
 }
 
@@ -63,10 +75,14 @@ mod tests {
             ),
         ];
 
-        let original = ListWritersResponse { writers };
+        let original = ListWritersResponse {
+            count: writers.len() as u16,
+            writers,
+        };
         let serialized = original.serialize().unwrap();
         let deserialized = ListWritersResponse::deserialize(&serialized).unwrap();
 
+        assert_eq!(original.count, deserialized.count);
         assert_eq!(original.writers, deserialized.writers);
     }
 
@@ -82,11 +98,13 @@ mod tests {
         }
 
         let original = ListWritersResponse {
+            count: writers.len() as u16,
             writers: writers.clone(),
         };
         let serialized = original.serialize().unwrap();
         let deserialized = ListWritersResponse::deserialize(&serialized).unwrap();
 
+        assert_eq!(original.count, deserialized.count);
         assert_eq!(original.writers, deserialized.writers);
     }
 }

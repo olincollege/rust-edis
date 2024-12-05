@@ -2,7 +2,8 @@ use crate::messages::message::{MessagePayload, MessageType};
 use anyhow::{Context, Result};
 
 pub struct ListReadersResponse {
-    pub readers: Vec<([u8; 16], u16)>, // Each writer is a tuple of 16-byte IP and 2-byte port
+    pub count: u16,                    // Number of readers
+    pub readers: Vec<([u8; 16], u16)>, // Each reader is a tuple of 16-byte IP and 2-byte port
 }
 
 /// Layout of the ListReadersResponse
@@ -17,20 +18,31 @@ impl MessagePayload for ListReadersResponse {
         let mut buffer = Vec::new();
 
         // Add the number of readers (2 bytes, little-endian)
-        let count = u16::try_from(self.readers.len()).context("too many readers")?;
-        buffer.extend_from_slice(&count.to_le_bytes());
+        buffer.extend_from_slice(&self.count.to_le_bytes());
 
+        // Serialize each reader
         for (ip, port) in &self.readers {
             buffer.extend_from_slice(ip); // Add 16-byte IP
             buffer.extend_from_slice(&port.to_le_bytes()); // Add 2-byte port in little-endian
         }
+
         Ok(buffer)
     }
 
     fn deserialize(buffer: &[u8]) -> Result<Self> {
-        let mut readers = Vec::new();
         let mut offset = 0;
-        while offset + 18 <= buffer.len() {
+
+        // Read the number of readers (2 bytes, little-endian)
+        let count = u16::from_le_bytes(
+            <[u8; 2]>::try_from(&buffer[offset..offset + 2])
+                .context("failed to get reader count")?,
+        );
+        offset += 2;
+
+        let mut readers = Vec::new();
+
+        // Deserialize each reader
+        for _ in 0..count {
             let ip = <[u8; 16]>::try_from(&buffer[offset..offset + 16])
                 .context("failed to get IP bytes")?;
             offset += 16;
@@ -44,7 +56,7 @@ impl MessagePayload for ListReadersResponse {
             readers.push((ip, port));
         }
 
-        Ok(ListReadersResponse { readers })
+        Ok(ListReadersResponse { count, readers })
     }
 }
 
@@ -63,10 +75,14 @@ mod tests {
             ),
         ];
 
-        let original = ListReadersResponse { readers };
+        let original = ListReadersResponse {
+            count: readers.len() as u16,
+            readers,
+        };
         let serialized = original.serialize().unwrap();
         let deserialized = ListReadersResponse::deserialize(&serialized).unwrap();
 
+        assert_eq!(original.count, deserialized.count);
         assert_eq!(original.readers, deserialized.readers);
     }
 
@@ -82,11 +98,13 @@ mod tests {
         }
 
         let original = ListReadersResponse {
+            count: readers.len() as u16,
             readers: readers.clone(),
         };
         let serialized = original.serialize().unwrap();
         let deserialized = ListReadersResponse::deserialize(&serialized).unwrap();
 
+        assert_eq!(original.count, deserialized.count);
         assert_eq!(original.readers, deserialized.readers);
     }
 }
