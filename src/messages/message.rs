@@ -6,7 +6,7 @@ use int_enum::IntEnum;
 pub enum MessageType {
     Write = 0,         // 0 - third byte write request
     Read = 1,          // 1 - third byte read request
-    ListWriters = 2,    // 2 - list of ip/ports of write replicas
+    ListWriters = 2,   // 2 - list of ip/ports of write replicas
     ListReaders = 3,   // 3 - list of ip/ports of read replicas
     ReplicaInfo = 4,   // 4 - number of read/write replicas and other info
     QueryVersion = 5,  // 5 - query the latest version number
