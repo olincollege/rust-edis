@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.94"
+async_smux = "0.3.4"
 int-enum = "1.1.2"
 rand = "0.8.5"
 tokio = { version = "1.41.1", features = ["full"] }
