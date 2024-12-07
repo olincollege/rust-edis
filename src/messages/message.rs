@@ -4,13 +4,12 @@ use int_enum::IntEnum;
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, IntEnum, PartialEq, Eq)]
 pub enum MessageType {
-    Write = 0,         // 0 - third byte write request
-    Read = 1,          // 1 - third byte read request
-    ListWriters = 2,   // 2 - list of ip/ports of write replicas
-    ListReaders = 3,   // 3 - list of ip/ports of read replicas
-    ReplicaInfo = 4,   // 4 - number of read/write replicas and other info
-    QueryVersion = 5,  // 5 - query the latest version number
-    GetVersion = 6,    // 6 - read key-value for a version number
+    Write = 0,              // 0 - third byte write request
+    Read = 1,               // 1 - third byte read request
+    GetClientShardInfo = 2, // 2 - get client shard info
+    ReplicaInfo = 5,        // 5 - number of read/write replicas and other info
+    QueryVersion = 6,       // 6 - query the latest version number
+    GetVersion = 7,         // 7 - read key-value for a version number
 }
 
 pub trait MessagePayload {
@@ -80,7 +79,7 @@ impl<T: MessagePayload> Message<T> {
 
 mod tests {
     use super::*;
-    use crate::messages::write_request::WriteRequest;
+    use crate::messages::requests::write_request::WriteRequest;
 
     #[test]
     fn test_basic_roundtrip() {
