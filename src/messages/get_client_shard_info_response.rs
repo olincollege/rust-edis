@@ -1,6 +1,5 @@
 use crate::messages::message::{MessagePayload, MessageType};
 use anyhow::{Context, Result};
-use int_enum::IntEnum;
 
 /// Layout of the GetClientShardInfoResponse as described in architecture
 /// | 2 bytes | N * 18 bytes | M * 18 bytes |
