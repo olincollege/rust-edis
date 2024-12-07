@@ -1,6 +1,18 @@
 use anyhow::{Context, Result};
 use int_enum::IntEnum;
 
+use super::requests::{
+    get_client_shard_info_request::GetClientShardInfoRequest,
+    query_version_request::QueryVersionRequest,
+    read_request::ReadRequest,
+    write_request::WriteRequest,
+};
+
+use super::responses::{
+    get_client_shard_info_response::GetClientShardInfoResponse,
+    query_version_response::QueryVersionResponse,
+};
+
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, IntEnum, PartialEq, Eq)]
 pub enum MessageType {
@@ -19,6 +31,34 @@ pub trait MessagePayload {
     fn deserialize(buffer: &[u8]) -> Result<Self>
     where
         Self: Sized;
+}
+
+pub fn bytes_as_request_message(buffer: &[u8]) -> Result<Box<dyn MessagePayload>> {
+    let message_type = MessageType::try_from(buffer[4])
+        .map_err(|_| anyhow::anyhow!("invalid message type"))?;
+    let result: Box<dyn MessagePayload> = match message_type {
+        MessageType::Write => Box::new(WriteRequest::deserialize(buffer)?),
+        MessageType::Read => Box::new(ReadRequest::deserialize(buffer)?),
+        MessageType::GetClientShardInfo => {
+            Box::new(GetClientShardInfoRequest::deserialize(buffer)?)
+        }
+        MessageType::QueryVersion => Box::new(QueryVersionRequest::deserialize(buffer)?),
+        _ => return Err(anyhow::anyhow!("unsupported message type")),
+    };
+    Ok(result)
+}
+
+pub fn bytes_as_response_message(buffer: &[u8]) -> Result<Box<dyn MessagePayload>> {
+    let message_type = MessageType::try_from(buffer[4])
+    .map_err(|_| anyhow::anyhow!("invalid message type"))?;
+    let result: Box<dyn MessagePayload> = match message_type {
+        MessageType::GetClientShardInfo => {
+            Box::new(GetClientShardInfoResponse::deserialize(buffer)?)
+        }
+        MessageType::QueryVersion => Box::new(QueryVersionResponse::deserialize(buffer)?),
+        _ => return Err(anyhow::anyhow!("unsupported message type")),
+    };
+    Ok(result)
 }
 
 /// Layout of the Message as described in architecture
