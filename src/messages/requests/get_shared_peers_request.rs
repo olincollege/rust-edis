@@ -9,6 +9,10 @@ pub struct GetSharedPeersRequest {
 /// | 2 bytes |
 /// | Writer Number |
 impl MessagePayload for GetSharedPeersRequest {
+    fn is_request(&self) -> bool {
+        true
+    }
+
     fn get_message_type(&self) -> MessageType {
         MessageType::GetSharedPeers
     }

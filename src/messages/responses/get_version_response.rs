@@ -23,6 +23,11 @@ impl MessagePayload for GetVersionResponse {
     fn get_message_type(&self) -> MessageType {
         MessageType::GetVersion
     }
+
+    fn is_request(&self) -> bool {
+        false
+    }
+
     fn serialize(&self) -> Result<Vec<u8>> {
         let mut buffer = Vec::new();
         buffer.push(self.error);

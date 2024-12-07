@@ -7,6 +7,8 @@ use super::requests::{
     write_request::WriteRequest,
 };
 
+use super::responses::read_response::ReadResponse;
+use super::responses::write_response::WriteResponse;
 use super::responses::{
     get_client_shard_info_response::GetClientShardInfoResponse,
     query_version_response::QueryVersionResponse,
@@ -25,6 +27,7 @@ pub enum MessageType {
 }
 
 pub trait MessagePayload {
+    fn is_request(&self) -> bool;
     fn get_message_type(&self) -> MessageType;
     fn serialize(&self) -> Result<Vec<u8>>;
     fn deserialize(buffer: &[u8]) -> Result<Self>
@@ -32,42 +35,48 @@ pub trait MessagePayload {
         Self: Sized;
 }
 
-pub fn bytes_as_request_message(buffer: &[u8]) -> Result<Box<dyn MessagePayload>> {
+pub fn bytes_as_message(buffer: &[u8]) -> Result<Box<dyn MessagePayload>> {
     let message_type =
         MessageType::try_from(buffer[4]).map_err(|_| anyhow::anyhow!("invalid message type"))?;
+    let is_request = buffer[5] == 1;
     let result: Box<dyn MessagePayload> = match message_type {
-        MessageType::Write => Box::new(WriteRequest::deserialize(buffer)?),
-        MessageType::Read => Box::new(ReadRequest::deserialize(buffer)?),
-        MessageType::GetClientShardInfo => {
-            Box::new(GetClientShardInfoRequest::deserialize(buffer)?)
+        MessageType::Write => {
+            match is_request {
+                true => Box::new(WriteRequest::deserialize(buffer)?),
+                false => Box::new(WriteResponse::deserialize(buffer)?),
+            }
         }
-        MessageType::QueryVersion => Box::new(QueryVersionRequest::deserialize(buffer)?),
-        _ => return Err(anyhow::anyhow!("unsupported message type")),
-    };
-    Ok(result)
-}
-
-pub fn bytes_as_response_message(buffer: &[u8]) -> Result<Box<dyn MessagePayload>> {
-    let message_type =
-        MessageType::try_from(buffer[4]).map_err(|_| anyhow::anyhow!("invalid message type"))?;
-    let result: Box<dyn MessagePayload> = match message_type {
-        MessageType::Read => Box::new(ReadRequest::deserialize(buffer)?),
-        MessageType::Write => Box::new(WriteRequest::deserialize(buffer)?),
-        MessageType::GetClientShardInfo => {
-            Box::new(GetClientShardInfoResponse::deserialize(buffer)?)
+        MessageType::Read => {
+            match is_request {
+                true => Box::new(ReadRequest::deserialize(buffer)?),
+                false => Box::new(ReadResponse::deserialize(buffer)?),
+            }
         }
-        MessageType::QueryVersion => Box::new(QueryVersionResponse::deserialize(buffer)?),
+        MessageType::GetClientShardInfo => {
+            match is_request {
+                true => Box::new(GetClientShardInfoRequest::deserialize(buffer)?),
+                false => Box::new(GetClientShardInfoResponse::deserialize(buffer)?),
+            }
+        }
+        MessageType::QueryVersion => {
+            match is_request {
+                true => Box::new(QueryVersionRequest::deserialize(buffer)?),
+                false => Box::new(QueryVersionResponse::deserialize(buffer)?),
+            }
+        }
         _ => return Err(anyhow::anyhow!("unsupported message type")),
     };
     Ok(result)
 }
 
 /// Layout of the Message as described in architecture
-/// | 4 bytes | 1 byte  | N bytes |
-/// | totlen  | msgtype | payload |
+/// | 4 bytes | 1 byte  | 1 byte  | N bytes |
+/// | totlen  | msgtype | is_req  | payload |
 /// Integers are always encoded in little-endian order
 /// totlen includes the length of all fields (including itself)
+/// is_req is 1 for requests, 0 for responses
 pub struct Message<T: MessagePayload> {
+    pub is_request: bool,
     pub message_type: MessageType,
     pub message_payload: T,
 }
@@ -102,9 +111,15 @@ impl<T: MessagePayload> Message<T> {
                 .context("failed to get message type")?
                 .try_into()?,
         );
+        let is_request = u8::from_le_bytes(
+            buffer
+                .get(5..6)
+                .context("failed to get is_request")?
+                .try_into()?,
+        ) == 1;
         let message_type = MessageType::try_from(message_type_bytes)
             .map_err(|_| anyhow::anyhow!("invalid message type"))?;
-        let header_length = size_of_val(&total_length) + size_of_val(&message_type);
+        let header_length = size_of_val(&total_length) + size_of_val(&message_type) + size_of_val(&is_request);
         let payload_length = (total_length as usize) - header_length;
 
         let message_payload = T::deserialize(
@@ -113,6 +128,7 @@ impl<T: MessagePayload> Message<T> {
                 .context("failed to get message payload")?,
         )?;
         Ok(Message {
+            is_request,
             message_type,
             message_payload,
         })
@@ -127,6 +143,7 @@ mod tests {
     #[test]
     fn test_basic_roundtrip() {
         let message = Message {
+            is_request: true,
             message_type: MessageType::Write,
             message_payload: WriteRequest {
                 key: b"test".to_vec(),

@@ -14,6 +14,11 @@ impl MessagePayload for GetClientShardInfoResponse {
     fn get_message_type(&self) -> MessageType {
         MessageType::GetClientShardInfo
     }
+
+    fn is_request(&self) -> bool {
+        false
+    }
+
     fn serialize(&self) -> Result<Vec<u8>> {
         let mut buffer = Vec::new();
         buffer.extend_from_slice(&self.num_write_shards.to_le_bytes());
