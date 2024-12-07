@@ -7,9 +7,10 @@ pub enum MessageType {
     Write = 0,              // 0 - third byte write request
     Read = 1,               // 1 - third byte read request
     GetClientShardInfo = 2, // 2 - get client shard info
-    ReplicaInfo = 5,        // 5 - number of read/write replicas and other info
-    QueryVersion = 6,       // 6 - query the latest version number
-    GetVersion = 7,         // 7 - read key-value for a version number
+    QueryVersion = 3,       // 3 - query the latest version number
+    GetVersion = 4,         // 4 - read key-value for a version number
+    AnnounceShard = 5,      // 5 - announce a shard
+    GetSharedPeers = 6,     // 6 - get shared peers
 }
 
 pub trait MessagePayload {
@@ -77,6 +78,7 @@ impl<T: MessagePayload> Message<T> {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::messages::requests::write_request::WriteRequest;
