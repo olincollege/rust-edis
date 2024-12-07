@@ -1,6 +1,5 @@
 use crate::messages::message::{MessagePayload, MessageType};
 use anyhow::{Context, Result};
-use rand::Rng;
 
 pub struct ReadRequest {
     pub key: Vec<u8>,
@@ -36,8 +35,10 @@ impl MessagePayload for ReadRequest {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
+    use rand::Rng;
 
     #[test]
     fn test_roundtrip_basic() {
