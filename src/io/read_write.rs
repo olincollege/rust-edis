@@ -1,12 +1,13 @@
-use async_smux::{Mux, MuxConfig, MuxStream};
+use async_smux::{MuxStream};
 use anyhow::Result;
-use tokio::{io::AsyncReadExt, net::TcpStream};
+use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpStream};
+use zerocopy::IntoBytes;
 use std::io::Write;
 
 
-use crate::messages::message::{Message, MessagePayload};
+use crate::messages::message::{MessagePayload, bytes_as_request_message, bytes_as_response_message};
 
-pub async fn read_message(mut stream: MuxStream<TcpStream>) -> Result<Box<dyn MessagePayload>> {
+pub async fn read_message(mut stream: MuxStream<TcpStream>, is_request: bool) -> Result<Box<dyn MessagePayload>> {
     let mut buffer = [0; 4096];
     let mut buffer_idx = 0;
 
@@ -47,7 +48,29 @@ pub async fn read_message(mut stream: MuxStream<TcpStream>) -> Result<Box<dyn Me
     }
 
     // deserialize the message
-    let message = Message::<Box<dyn MessagePayload>>::deserialize(&buffer[0..total_length])?;
+    let result = match is_request {
+        true => bytes_as_request_message(&buffer[0..total_length]),
+        false => bytes_as_response_message(&buffer[0..total_length]),
+    }?;
+    Ok(result)
+}
 
-    return Ok(message.message_payload);
+
+pub async fn write_message(mut stream: MuxStream<TcpStream>, message: Box<dyn MessagePayload>) -> Result<()> {
+    let serialized = message.serialize()?;
+    let mut serialized_buf = serialized.as_bytes();
+    stream.write_all_buf(&mut serialized_buf).await?;
+    Ok(())
+}
+
+
+mod tests {
+    use super::*;
+
+    #[tokio::test]  
+    async fn test_read_message() {
+        let stream = TcpStream::connect("127.0.0.1:8080").await.unwrap();
+        let message = read_message(stream, true).await.unwrap();
+        println!("{:?}", message);
+    }
 }

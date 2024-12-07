@@ -32,7 +32,7 @@ pub trait MessagePayload {
         Self: Sized;
 }
 
-fn bytes_as_request_message(buffer: &[u8]) -> Result<Box<dyn MessagePayload>> {
+pub fn bytes_as_request_message(buffer: &[u8]) -> Result<Box<dyn MessagePayload>> {
     let message_type = MessageType::try_from(buffer[4])
         .map_err(|_| anyhow::anyhow!("invalid message type"))?;
     let result: Box<dyn MessagePayload> = match message_type {
@@ -47,7 +47,7 @@ fn bytes_as_request_message(buffer: &[u8]) -> Result<Box<dyn MessagePayload>> {
     Ok(result)
 }
 
-fn bytes_as_response_message(buffer: &[u8]) -> Result<Box<dyn MessagePayload>> {
+pub fn bytes_as_response_message(buffer: &[u8]) -> Result<Box<dyn MessagePayload>> {
     let message_type = MessageType::try_from(buffer[4])
     .map_err(|_| anyhow::anyhow!("invalid message type"))?;
     let result: Box<dyn MessagePayload> = match message_type {
