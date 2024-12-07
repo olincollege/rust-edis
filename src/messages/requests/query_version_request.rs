@@ -1,6 +1,5 @@
 use crate::messages::message::{MessagePayload, MessageType};
-use anyhow::{Context, Result};
-use rand::Rng;
+use anyhow::Result;
 
 pub struct QueryVersionRequest {}
 
