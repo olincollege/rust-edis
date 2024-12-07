@@ -79,7 +79,7 @@ impl<T: MessagePayload> Message<T> {
 
 mod tests {
     use super::*;
-    use crate::messages::write_request::WriteRequest;
+    use crate::messages::requests::write_request::WriteRequest;
 
     #[test]
     fn test_basic_roundtrip() {
