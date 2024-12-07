@@ -66,11 +66,12 @@ pub async fn write_message(mut stream: MuxStream<TcpStream>, message: Box<dyn Me
 
 mod tests {
     use super::*;
-
+/* 
     #[tokio::test]  
     async fn test_read_message() {
         let stream = TcpStream::connect("127.0.0.1:8080").await.unwrap();
         let message = read_message(stream, true).await.unwrap();
         println!("{:?}", message);
     }
+    */
 }
