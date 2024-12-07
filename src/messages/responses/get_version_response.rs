@@ -61,6 +61,7 @@ impl MessagePayload for GetVersionResponse {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
     use rand::Rng;

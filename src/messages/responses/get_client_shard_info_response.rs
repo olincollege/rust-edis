@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 /// Layout of the GetClientShardInfoResponse as described in architecture
 /// | 2 bytes | N * 18 bytes | M * 18 bytes |
 /// | num_write_shards | write_shard_info | read_shard_info |
-struct GetClientShardInfoResponse {
+pub struct GetClientShardInfoResponse {
     pub num_write_shards: u16,
     pub write_shard_info: Vec<([u8; 16], u16)>,
     pub read_shard_info: Vec<([u8; 16], u16)>,
@@ -78,6 +78,7 @@ impl MessagePayload for GetClientShardInfoResponse {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
     use rand::Rng;
