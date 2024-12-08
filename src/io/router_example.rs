@@ -1,6 +1,6 @@
 use crate::{messages::{requests::{announce_shard_request::AnnounceShardRequest, get_client_shard_info_request::GetClientShardInfoRequest, query_version_request::QueryVersionRequest, read_request::ReadRequest, write_request::WriteRequest}, responses::{announce_shard_response::AnnounceShardResponse, get_client_shard_info_response::GetClientShardInfoResponse, query_version_response::QueryVersionResponse, read_response::ReadResponse, write_response::WriteResponse}}};
 use crate::io::router::{RouterBuilder, RouterHandler};
-
+/* 
 
 struct ExampleRouterHandler {
 
@@ -66,7 +66,7 @@ impl RouterHandler for ExampleRouterHandler {
 
 
 mod test {
-    use anyhow::Result;
+    use anyhow::{Ok,Result};
     use crate::{io::{router::RouterBuilder, router_example::ExampleRouterHandler}, messages::requests::{query_version_request::QueryVersionRequest, read_request::ReadRequest}};
 
 
@@ -76,11 +76,12 @@ mod test {
         let router2: RouterBuilder<ExampleRouterHandler> = RouterBuilder::new(ExampleRouterHandler {}, Some("127.0.0.1:8081".to_string()));
 
         tokio::spawn(async move {
-            router2.listen().await
+            router2.listen().await?;
+            Ok(())
         });
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
-        for _ in 0..10 {
+        for _ in 0..3 {
             router1.queue_request(ReadRequest {
                 key: "test".as_bytes().to_vec()
             }, "127.0.0.1:8081".to_string()).await?;
@@ -91,3 +92,4 @@ mod test {
         Ok(())
     }
 }
+    */

@@ -1,5 +1,7 @@
 use crate::io::write::write_message;
 use crate::messages::message::{AsAny, Message};
+use crate::messages::requests::get_shared_peers_request::GetSharedPeersRequest;
+use crate::messages::responses::get_shared_peers_response::GetSharedPeersResponse;
 use crate::messages::{
     message::{MessagePayload, MessageType},
     requests::{
@@ -16,6 +18,7 @@ use crate::messages::{
     },
 };
 use anyhow::{anyhow, Ok, Result};
+use std::future::IntoFuture;
 use std::{cell::RefCell, sync::Arc};
 use tokio::{
     io::{AsyncReadExt, Interest},
@@ -37,40 +40,48 @@ pub trait RouterHandler: Send + Sync + 'static {
     fn handle_announce_shard_request(&self, req: &AnnounceShardRequest) -> AnnounceShardResponse;
 
     fn handle_get_client_shard_info_request(
-        req: GetClientShardInfoRequest,
+        &self,
+        req: &GetClientShardInfoRequest,
     ) -> GetClientShardInfoResponse;
 
-    fn handle_query_version_request(req: QueryVersionRequest) -> QueryVersionResponse;
+    fn handle_query_version_request(
+        &self,
+        req: &QueryVersionRequest,
+    ) -> QueryVersionResponse;
 
-    fn handle_read_request(req: ReadRequest) -> ReadResponse;
+    fn handle_read_request(&self, req: &ReadRequest) -> ReadResponse;
 
-    fn handle_write_request(req: WriteRequest) -> WriteResponse;
+    fn handle_write_request(&self, req: &WriteRequest) -> WriteResponse;
+
+    fn handle_get_shared_peers_request(&self, req: &GetSharedPeersRequest) -> GetSharedPeersResponse;
 
     /// Callbacks for handling responses to outbound requests
-    fn handle_announce_shard_response(res: AnnounceShardResponse);
+    fn handle_announce_shard_response(&self, res: &AnnounceShardResponse);
 
-    fn handle_get_client_shard_info_response(res: GetClientShardInfoResponse);
+    fn handle_get_client_shard_info_response(&self, res: &GetClientShardInfoResponse);
 
-    fn handle_query_version_response(res: QueryVersionResponse);
+    fn handle_query_version_response(&self, res: &QueryVersionResponse);
 
-    fn handle_read_response(res: ReadResponse);
+    fn handle_read_response(&self, res: &ReadResponse);
 
-    fn handle_write_response(res: WriteResponse);
+    fn handle_write_response(&self, res: &WriteResponse);
+
+    fn handle_get_shared_peers_response(&self, res: &GetSharedPeersResponse);
 }
 
-pub struct RouterBuilder<T: RouterHandler>
+pub struct RouterBuilder<H: RouterHandler>
 {
-    pub handler: Arc<T>,
+    pub handler: Arc<H>,
     /// Map of peer addresses to write sockets
     pub write_sockets: Arc<HashMap<String, tokio::net::tcp::OwnedWriteHalf>>,
 
     pub bind_addr: Option<String>,
 }
 
-unsafe impl<T: RouterHandler> Send for RouterBuilder<T> {}
+unsafe impl<H: RouterHandler> Send for RouterBuilder<H> {}
 
-impl<T: RouterHandler> RouterBuilder<T> {
-    pub fn new(handler: T, bind_addr: Option<String>) -> Self {
+impl<H: RouterHandler> RouterBuilder<H> {
+    pub fn new(handler: H, bind_addr: Option<String>) -> Self {
         Self {
             handler: Arc::new(handler),
             write_sockets: Arc::new(scc::HashMap::new()),
@@ -79,9 +90,9 @@ impl<T: RouterHandler> RouterBuilder<T> {
     }
 
     /// Function for queueing outbound requests
-    pub async fn queue_request<M: MessagePayload>(&self, req: M, peer: String) -> Result<()> {
-        self.create_write_socket_if_needed(peer.clone()).await?;
-        let mut write_socket = self.write_sockets.get_async(&peer).await.unwrap();
+    pub async fn queue_request<M: MessagePayload>(write_sockets: Arc<HashMap<String, tokio::net::tcp::OwnedWriteHalf>>, handler: Arc<H>, req: M, peer: String) -> Result<()> {
+        Self::create_write_socket_if_needed(write_sockets.clone(), handler.clone(), peer.clone()).await?;
+        let mut write_socket = write_sockets.get_async(&peer).await.unwrap();
         write_message(&mut write_socket, Message {
            is_request: true,
            message_type: req.get_message_type(),
@@ -90,21 +101,28 @@ impl<T: RouterHandler> RouterBuilder<T> {
         Ok(())
     }
 
+    /// Function for queueing outbound responses
+    pub async fn queue_response<M: MessagePayload>(write_sockets: Arc<HashMap<String, tokio::net::tcp::OwnedWriteHalf>>, handler: Arc<H>, res: M, peer: String) -> Result<()> {
+        Self::queue_request(write_sockets, handler, res, peer).await?;
+        Ok(())
+    }
+
     /// Creates a write socket for a peer if it doesn't exist
-    async fn create_write_socket_if_needed(self: &Self, peer: String) -> Result<()> {
-        println!("creating!");
+    async fn create_write_socket_if_needed(write_sockets: Arc<HashMap<String, tokio::net::tcp::OwnedWriteHalf>>, handler: Arc<H>, peer: String) -> Result<()> {
         // check if peer is already connected
-        if !self.write_sockets.contains_async(&peer).await {
+        if !write_sockets.contains_async(&peer).await {
+            println!("creating!");
             let stream = TcpStream::connect(peer.clone()).await?;
             let (read, write) = stream.into_split();
 
             // push the write half to the map
-            self.write_sockets.insert_async(peer.clone(), write).await.unwrap();
+            write_sockets.insert_async(peer.clone(), write).await.unwrap();
 
             // bind the read half to a background task
-            let handler = self.handler.clone();
+            let handler = handler.clone();
+            let write_sockets = write_sockets.clone();
             tokio::spawn(async move {
-                Self::listen_read_half_socket(handler, read).await?;
+                Self::listen_read_half_socket(write_sockets, handler, read).await?;
                 Ok(())
             });
         }
@@ -112,8 +130,9 @@ impl<T: RouterHandler> RouterBuilder<T> {
     }
 
     /// Listens for inbound requests on the read half of a socket from a peer
-    async fn listen_read_half_socket<R: RouterHandler>(
-        handler: Arc<R>,
+    async fn listen_read_half_socket(
+        write_sockets: Arc<HashMap<String, tokio::net::tcp::OwnedWriteHalf>>,
+        handler: Arc<H>,
         mut read: OwnedReadHalf,
     ) -> Result<()> {
         loop {
@@ -124,19 +143,114 @@ impl<T: RouterHandler> RouterBuilder<T> {
             let peer = read.peer_addr()?.to_string();
 
             println!("read message");
-
-            match message.get_message_type() {
-                MessageType::AnnounceShard => {
-                    let req = message
-                        .as_any()
-                        .downcast_ref::<AnnounceShardRequest>()
-                        .unwrap();
-                    let res = handler.handle_announce_shard_request(req);
+            match message.is_request() {
+                true => {
+                    match message.get_message_type() {
+                        MessageType::AnnounceShard => {
+                            let req = message
+                            .as_any()
+                            .downcast_ref::<AnnounceShardRequest>()
+                            .unwrap();
+                            Self::queue_response::<AnnounceShardResponse>(write_sockets.clone(), handler.clone(), handler.handle_announce_shard_request(req), peer).await?;
+                        }
+                        MessageType::GetClientShardInfo => {
+                            let req = message
+                            .as_any()
+                            .downcast_ref::<GetClientShardInfoRequest>()
+                            .unwrap();
+                            Self::queue_response::<GetClientShardInfoResponse>(write_sockets.clone(), handler.clone(), handler.handle_get_client_shard_info_request(req), peer).await?;
+                        }
+                        MessageType::QueryVersion => {
+                            let req = message
+                            .as_any()
+                            .downcast_ref::<QueryVersionRequest>()
+                            .unwrap();
+                            Self::queue_response::<QueryVersionResponse>(write_sockets.clone(), handler.clone(), handler.handle_query_version_request(req), peer).await?;
+                        }
+                        MessageType::Read => {
+                            let req = message
+                            .as_any()
+                            .downcast_ref::<ReadRequest>()
+                            .unwrap();
+                            Self::queue_response::<ReadResponse>(write_sockets.clone(), handler.clone(), handler.handle_read_request(req), peer).await?;
+                        }
+                        MessageType::Write => {
+                            let req = message
+                            .as_any()
+                            .downcast_ref::<WriteRequest>()
+                            .unwrap();
+                            Self::queue_response::<WriteResponse>(write_sockets.clone(), handler.clone(), handler.handle_write_request(req), peer).await?;
+                        }
+                        MessageType::GetSharedPeers => {
+                            let req = message
+                            .as_any()
+                            .downcast_ref::<GetSharedPeersRequest>()
+                            .unwrap();
+                            Self::queue_response::<GetSharedPeersResponse>(write_sockets.clone(), handler.clone(), handler.handle_get_shared_peers_request(req), peer).await?;
+                        }
+                        MessageType::GetVersion => {
+                            let req = message
+                            .as_any()
+                            .downcast_ref::<QueryVersionRequest>()
+                            .unwrap();
+                            Self::queue_response::<QueryVersionResponse>(write_sockets.clone(), handler.clone(), handler.handle_query_version_request(req), peer).await?;
+                        }
+                    };
                 }
-                _ => {
-                    return Err(anyhow::anyhow!("unhandled message type"));
+                false => {
+                    match message.get_message_type() {
+                        MessageType::AnnounceShard => {
+                            let res = message
+                            .as_any()
+                            .downcast_ref::<AnnounceShardResponse>()
+                            .unwrap();
+                            handler.handle_announce_shard_response(res)
+                        }
+                        MessageType::GetClientShardInfo => {
+                            let res = message
+                            .as_any()
+                            .downcast_ref::<GetClientShardInfoResponse>()
+                            .unwrap();
+                            handler.handle_get_client_shard_info_response(res)
+                        }
+                        MessageType::QueryVersion => {
+                            let res = message
+                            .as_any()
+                            .downcast_ref::<QueryVersionResponse>()
+                            .unwrap();
+                            handler.handle_query_version_response(res)
+                        }
+                        MessageType::Read => {
+                            let res = message
+                            .as_any()
+                            .downcast_ref::<ReadResponse>()
+                            .unwrap();
+                            handler.handle_read_response(res)
+                        }
+                        MessageType::Write => {
+                            let res = message
+                            .as_any()
+                            .downcast_ref::<WriteResponse>()
+                            .unwrap();
+                            handler.handle_write_response(res)
+                        }
+                        MessageType::GetVersion => {
+                            let res = message
+                            .as_any()
+                            .downcast_ref::<QueryVersionResponse>()
+                            .unwrap();
+                            handler.handle_query_version_response(res)
+                        }
+                        MessageType::GetSharedPeers => {
+                            let res = message
+                            .as_any()
+                            .downcast_ref::<GetSharedPeersResponse>()
+                            .unwrap();
+                            handler.handle_get_shared_peers_response(res)
+                        }   
+                    }
                 }
-            }
+            };
         }
     }
 
@@ -158,8 +272,9 @@ impl<T: RouterHandler> RouterBuilder<T> {
 
             // bind the read half to a background task
             let handler = self.handler.clone();
+            let write_sockets = self.write_sockets.clone();
             tokio::spawn(async move {
-                Self::listen_read_half_socket(handler, read).await?;
+                Self::listen_read_half_socket(write_sockets, handler, read).await?;
                 Ok(())
             });
         }

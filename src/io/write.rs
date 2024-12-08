@@ -10,7 +10,9 @@ pub async fn write_message<T: MessagePayload>(
 ) -> Result<()> {
     let serialized = message.serialize()?;
     let serialized_buf = serialized.as_bytes();
+    let written = serialized_buf.len();
     stream.write_all(serialized_buf).await?;
-    println!("finished writing!");
+    stream.flush().await?;
+    println!("finished writing {written} bytes!");
     Ok(())
 }

@@ -50,6 +50,11 @@ pub async fn read_message(stream: &mut OwnedReadHalf) -> Result<Box<dyn MessageP
         }
     }
 
+    println!("finished reading message length: {total_length}");
+
     // deserialize the message
-    bytes_as_message(&buffer[0..total_length])
+    let message = bytes_as_message(&buffer[0..total_length])?;
+
+    println!("finished deserializing message length: {total_length}");
+    Ok(message)
 }
