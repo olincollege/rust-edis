@@ -27,7 +27,7 @@ pub enum MessageType {
     GetSharedPeers = 6,     // 6 - get shared peers
 }
 
-pub trait MessagePayload: AsAny {
+pub trait MessagePayload: AsAny + Send {
     fn is_request(&self) -> bool;
     fn get_message_type(&self) -> MessageType;
     fn serialize(&self) -> Result<Vec<u8>>;
@@ -49,23 +49,34 @@ pub fn bytes_as_message(buffer: &[u8]) -> Result<Box<dyn MessagePayload>> {
         MessageType::try_from(buffer[4]).map_err(|_| anyhow::anyhow!("invalid message type"))?;
     let is_request = buffer[5] == 1;
     let result: Box<dyn MessagePayload> = match message_type {
-        MessageType::Write => match is_request {
-            true => Box::new(WriteRequest::deserialize(buffer)?),
-            false => Box::new(WriteResponse::deserialize(buffer)?),
-        },
-        MessageType::Read => match is_request {
-            true => Box::new(ReadRequest::deserialize(buffer)?),
-            false => Box::new(ReadResponse::deserialize(buffer)?),
-        },
-        MessageType::GetClientShardInfo => match is_request {
-            true => Box::new(GetClientShardInfoRequest::deserialize(buffer)?),
-            false => Box::new(GetClientShardInfoResponse::deserialize(buffer)?),
-        },
-        MessageType::QueryVersion => match is_request {
-            true => Box::new(QueryVersionRequest::deserialize(buffer)?),
-            false => Box::new(QueryVersionResponse::deserialize(buffer)?),
-        },
-        _ => return Err(anyhow::anyhow!("unsupported message type")),
+        MessageType::Write => {
+            match is_request {
+                true => Box::new(Message::<WriteRequest>::deserialize(buffer)?.message_payload),
+                false => Box::new(Message::<WriteResponse>::deserialize(buffer)?.message_payload),
+            }
+        }
+        MessageType::Read => {
+            match is_request {
+                true => Box::new(Message::<ReadRequest>::deserialize(buffer)?.message_payload),
+                false => Box::new(Message::<ReadResponse>::deserialize(buffer)?.message_payload),
+            }
+        }
+        MessageType::GetClientShardInfo => {
+            match is_request {
+                true => Box::new(Message::<GetClientShardInfoRequest>::deserialize(buffer)?.message_payload),
+                false => Box::new(Message::<GetClientShardInfoResponse>::deserialize(buffer)?.message_payload),
+            }
+        }
+        MessageType::QueryVersion => {
+            match is_request {
+                true => Box::new(Message::<QueryVersionRequest>::deserialize(buffer)?.message_payload),
+                false => Box::new(Message::<QueryVersionResponse>::deserialize(buffer)?.message_payload),
+            }
+        }
+        _ => {
+            println!("failed to parse");
+            return Err(anyhow::anyhow!("unsupported message type"));
+        }
     };
     Ok(result)
 }
