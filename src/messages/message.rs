@@ -44,36 +44,27 @@ impl<T: Any> AsAny for T {
     }
 }
 
-
 pub fn bytes_as_message(buffer: &[u8]) -> Result<Box<dyn MessagePayload>> {
     let message_type =
         MessageType::try_from(buffer[4]).map_err(|_| anyhow::anyhow!("invalid message type"))?;
     let is_request = buffer[5] == 1;
     let result: Box<dyn MessagePayload> = match message_type {
-        MessageType::Write => {
-            match is_request {
-                true => Box::new(WriteRequest::deserialize(buffer)?),
-                false => Box::new(WriteResponse::deserialize(buffer)?),
-            }
-        }
-        MessageType::Read => {
-            match is_request {
-                true => Box::new(ReadRequest::deserialize(buffer)?),
-                false => Box::new(ReadResponse::deserialize(buffer)?),
-            }
-        }
-        MessageType::GetClientShardInfo => {
-            match is_request {
-                true => Box::new(GetClientShardInfoRequest::deserialize(buffer)?),
-                false => Box::new(GetClientShardInfoResponse::deserialize(buffer)?),
-            }
-        }
-        MessageType::QueryVersion => {
-            match is_request {
-                true => Box::new(QueryVersionRequest::deserialize(buffer)?),
-                false => Box::new(QueryVersionResponse::deserialize(buffer)?),
-            }
-        }
+        MessageType::Write => match is_request {
+            true => Box::new(WriteRequest::deserialize(buffer)?),
+            false => Box::new(WriteResponse::deserialize(buffer)?),
+        },
+        MessageType::Read => match is_request {
+            true => Box::new(ReadRequest::deserialize(buffer)?),
+            false => Box::new(ReadResponse::deserialize(buffer)?),
+        },
+        MessageType::GetClientShardInfo => match is_request {
+            true => Box::new(GetClientShardInfoRequest::deserialize(buffer)?),
+            false => Box::new(GetClientShardInfoResponse::deserialize(buffer)?),
+        },
+        MessageType::QueryVersion => match is_request {
+            true => Box::new(QueryVersionRequest::deserialize(buffer)?),
+            false => Box::new(QueryVersionResponse::deserialize(buffer)?),
+        },
         _ => return Err(anyhow::anyhow!("unsupported message type")),
     };
     Ok(result)

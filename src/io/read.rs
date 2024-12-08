@@ -1,7 +1,9 @@
-use async_smux::{MuxStream};
 use anyhow::Result;
-use tokio::{io::AsyncReadExt, net::{tcp::OwnedReadHalf, TcpStream}};
-
+use async_smux::MuxStream;
+use tokio::{
+    io::AsyncReadExt,
+    net::{tcp::OwnedReadHalf, TcpStream},
+};
 
 use crate::messages::message::{bytes_as_message, MessagePayload};
 
@@ -48,4 +50,3 @@ pub async fn read_message(stream: &mut OwnedReadHalf) -> Result<Box<dyn MessageP
     // deserialize the message
     bytes_as_message(&buffer[0..total_length])
 }
-

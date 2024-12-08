@@ -62,11 +62,7 @@ impl MessagePayload for GetVersionResponse {
             .get(3 + key_len + 2..3 + key_len + 2 + value_len)
             .context("failed to get value")?
             .to_vec();
-        Ok(GetVersionResponse {
-            error,
-            key,
-            value,
-        })
+        Ok(GetVersionResponse { error, key, value })
     }
 }
 
