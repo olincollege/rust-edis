@@ -121,7 +121,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
     async fn create_write_socket_if_needed(write_sockets: Arc<HashMap<String, tokio::net::tcp::OwnedWriteHalf>>, handler: Arc<H>, peer: String) -> Result<()> {
         // check if peer is already connected
         if !write_sockets.contains_async(&peer).await {
-            println!("creating!");
+            //println!("creating!");
             let stream = TcpStream::connect(peer.clone()).await?;
             let (read, write) = stream.into_split();
 
@@ -146,13 +146,13 @@ impl<H: RouterHandler> RouterBuilder<H> {
         mut read: OwnedReadHalf,
     ) -> Result<()> {
         loop {
-            println!("waiting for read");
+            //println!("waiting for read");
             read.readable().await?;
-            println!("done waiting for read");
+            //println!("done waiting for read");
             let message = read_message(&mut read).await?;
             let peer = read.peer_addr()?.to_string();
 
-            println!("read message");
+            //println!("read message");
             match message.is_request() {
                 true => {
                     match message.get_message_type() {
@@ -281,12 +281,12 @@ impl<H: RouterHandler> RouterBuilder<H> {
     /// Makes the router start listening for inbound requests
     pub async fn listen(&self) -> Result<()> {
         let listener = TcpListener::bind(self.bind_addr.as_deref().unwrap_or("127.0.0.1:0")).await?;
-        println!("listening on {}", listener.local_addr()?);
+        //println!("listening on {}", listener.local_addr()?);
 
         loop {
             //let (mut socket, addr) = Arc::new(listener.accept().await?);
             let (socket, addr) = listener.accept().await?;
-            print!("accepted connection!");
+            //println!("accepted connection!");
 
             let (read, write) = socket.into_split();
 
