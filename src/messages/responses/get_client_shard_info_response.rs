@@ -14,6 +14,11 @@ impl MessagePayload for GetClientShardInfoResponse {
     fn get_message_type(&self) -> MessageType {
         MessageType::GetClientShardInfo
     }
+
+    fn is_request(&self) -> bool {
+        false
+    }
+
     fn serialize(&self) -> Result<Vec<u8>> {
         let mut buffer = Vec::new();
         buffer.extend_from_slice(&self.num_write_shards.to_le_bytes());
@@ -36,11 +41,10 @@ impl MessagePayload for GetClientShardInfoResponse {
                 .try_into()?,
         );
 
-       
         let mut write_shard_info = Vec::new();
         let mut read_shard_info = Vec::new();
 
-        for i  in 0..(num_write_shards as usize) {
+        for i in 0..(num_write_shards as usize) {
             let write_shard_offset: usize = 2;
 
             let ip_write = buffer
@@ -87,12 +91,24 @@ mod tests {
         let original = GetClientShardInfoResponse {
             num_write_shards: 2,
             write_shard_info: vec![
-                ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], 8080),
-                ([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17], 8081),
+                (
+                    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                    8080,
+                ),
+                (
+                    [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+                    8081,
+                ),
             ],
             read_shard_info: vec![
-                ([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18], 9080),
-                ([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19], 9081),
+                (
+                    [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+                    9080,
+                ),
+                (
+                    [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+                    9081,
+                ),
             ],
         };
         let serialized = original.serialize().unwrap();
@@ -107,10 +123,10 @@ mod tests {
         for _ in 0..1000 {
             let mut rng = rand::thread_rng();
             let num_shards = rng.gen_range(1..11);
-            
+
             let mut write_shard_info = Vec::new();
             let mut read_shard_info = Vec::new();
-            
+
             for _ in 0..num_shards {
                 let write_ip: [u8; 16] = rng.gen();
                 let write_port = rng.gen();
