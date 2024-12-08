@@ -2,11 +2,11 @@ use anyhow::Result;
 use tokio::{io::AsyncWriteExt, net::tcp::OwnedWriteHalf};
 use zerocopy::IntoBytes;
 
-use crate::messages::message::MessagePayload;
+use crate::messages::message::{Message, MessagePayload};
 
-pub async fn write_message(
+pub async fn write_message<T: MessagePayload>(
     stream: &mut OwnedWriteHalf,
-    message: Box<dyn MessagePayload>,
+    message: Message<T>,
 ) -> Result<()> {
     let serialized = message.serialize()?;
     let serialized_buf = serialized.as_bytes();

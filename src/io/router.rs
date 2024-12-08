@@ -1,5 +1,5 @@
 use crate::io::write::write_message;
-use crate::messages::message::AsAny;
+use crate::messages::message::{AsAny, Message};
 use crate::messages::{
     message::{MessagePayload, MessageType},
     requests::{
@@ -82,7 +82,11 @@ impl<T: RouterHandler> RouterBuilder<T> {
     pub async fn queue_request<M: MessagePayload>(&self, req: M, peer: String) -> Result<()> {
         self.create_write_socket_if_needed(peer.clone()).await?;
         let mut write_socket = self.write_sockets.get_async(&peer).await.unwrap();
-        write_message(&mut write_socket, Box::new(req)).await?;
+        write_message(&mut write_socket, Message {
+           is_request: true,
+           message_type: req.get_message_type(),
+           message_payload: req
+        }).await?;
         Ok(())
     }
 
