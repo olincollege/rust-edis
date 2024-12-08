@@ -158,6 +158,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
                     match message.get_message_type() {
                         MessageType::AnnounceShard => {
                             let req = message
+                            .as_ref()
                             .as_any()
                             .downcast_ref::<AnnounceShardRequest>()
                             .unwrap();
@@ -165,6 +166,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
                         }
                         MessageType::GetClientShardInfo => {
                             let req = message
+                            .as_ref()
                             .as_any()
                             .downcast_ref::<GetClientShardInfoRequest>()
                             .unwrap();
@@ -172,6 +174,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
                         }
                         MessageType::QueryVersion => {
                             let req = message
+                            .as_ref()
                             .as_any()
                             .downcast_ref::<QueryVersionRequest>()
                             .unwrap();
@@ -179,6 +182,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
                         }
                         MessageType::Read => {
                             let req = message
+                            .as_ref()
                             .as_any()
                             .downcast_ref::<ReadRequest>()
                             .unwrap();
@@ -186,6 +190,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
                         }
                         MessageType::Write => {
                             let req = message
+                            .as_ref()
                             .as_any()
                             .downcast_ref::<WriteRequest>()
                             .unwrap();
@@ -193,6 +198,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
                         }
                         MessageType::GetSharedPeers => {
                             let req = message
+                            .as_ref()
                             .as_any()
                             .downcast_ref::<GetSharedPeersRequest>()
                             .unwrap();
@@ -200,6 +206,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
                         }
                         MessageType::GetVersion => {
                             let req = message
+                            .as_ref()
                             .as_any()
                             .downcast_ref::<QueryVersionRequest>()
                             .unwrap();
@@ -211,6 +218,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
                     match message.get_message_type() {
                         MessageType::AnnounceShard => {
                             let res = message
+                            .as_ref()
                             .as_any()
                             .downcast_ref::<AnnounceShardResponse>()
                             .unwrap();
@@ -218,6 +226,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
                         }
                         MessageType::GetClientShardInfo => {
                             let res = message
+                            .as_ref()
                             .as_any()
                             .downcast_ref::<GetClientShardInfoResponse>()
                             .unwrap();
@@ -225,6 +234,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
                         }
                         MessageType::QueryVersion => {
                             let res = message
+                            .as_ref()
                             .as_any()
                             .downcast_ref::<QueryVersionResponse>()
                             .unwrap();
@@ -232,6 +242,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
                         }
                         MessageType::Read => {
                             let res = message
+                            .as_ref()
                             .as_any()
                             .downcast_ref::<ReadResponse>()
                             .unwrap();
@@ -239,6 +250,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
                         }
                         MessageType::Write => {
                             let res = message
+                            .as_ref()
                             .as_any()
                             .downcast_ref::<WriteResponse>()
                             .unwrap();
@@ -246,6 +258,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
                         }
                         MessageType::GetVersion => {
                             let res = message
+                            .as_ref()
                             .as_any()
                             .downcast_ref::<QueryVersionResponse>()
                             .unwrap();
@@ -253,6 +266,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
                         }
                         MessageType::GetSharedPeers => {
                             let res = message
+                            .as_ref()
                             .as_any()
                             .downcast_ref::<GetSharedPeersResponse>()
                             .unwrap();
