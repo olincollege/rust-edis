@@ -47,7 +47,7 @@ pub trait RouterHandler {
 struct RouterBuilder<T: RouterHandler> {
     handler: T,
     /// Map of peer addresses to write sockets
-    write_sockets: RefCell<HashMap<String, Arc<OwnedWriteHalf>>>,
+    write_sockets: RefCell<HashMap<String, OwnedWriteHalf>>,
 
 }
 
@@ -77,6 +77,24 @@ impl<T: RouterHandler> RouterBuilder<T> {
 
     }
 
+    async fn create_write_socket_if_needed(&self, peer: String) -> Result<()> {
+        // check if peer is already connected
+        if !self.write_sockets.borrow().contains_key(&peer) {
+            let stream = TcpStream::connect(peer.clone()).await?;
+            let (read, write) = stream.into_split();
+
+            // push the write half to the map
+            self.write_sockets.borrow_mut().insert(peer.clone(), write);
+
+            // bind the read half to a background task
+            tokio::spawn(async move {
+                Self::listen_read_half_socket(read).await?;
+                Ok(())
+            });
+        }
+        Ok(())
+    }
+
     /// Listens for inbound requests on the read half of a socket from a peer
     async fn listen_read_half_socket(mut read: OwnedReadHalf) -> Result<()> {
         let mut buf = [0; 1024];
@@ -98,7 +116,7 @@ impl<T: RouterHandler> RouterBuilder<T> {
             let (read, write) = socket.into_split();
             
             // new peer discovered, add to our list of write sockets
-            self.write_sockets.borrow_mut().insert(addr.to_string(), Arc::new(write));
+            self.write_sockets.borrow_mut().insert(addr.to_string(), write);
             
             // bind the read half to a background task
             tokio::spawn(async move {
