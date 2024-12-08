@@ -88,13 +88,14 @@ impl<T: RouterHandler> RouterBuilder<T> {
 
     /// Creates a write socket for a peer if it doesn't exist
     async fn create_write_socket_if_needed(self: &Self, peer: String) -> Result<()> {
+        println!("creating!");
         // check if peer is already connected
         if !self.write_sockets.contains_async(&peer).await {
             let stream = TcpStream::connect(peer.clone()).await?;
             let (read, write) = stream.into_split();
 
             // push the write half to the map
-            self.write_sockets.insert_async(peer.clone(), write);
+            self.write_sockets.insert_async(peer.clone(), write).await.unwrap();
 
             // bind the read half to a background task
             let handler = self.handler.clone();
@@ -139,6 +140,7 @@ impl<T: RouterHandler> RouterBuilder<T> {
         loop {
             //let (mut socket, addr) = Arc::new(listener.accept().await?);
             let (socket, addr) = listener.accept().await?;
+            print!("accepted connection!");
 
             let (read, write) = socket.into_split();
 

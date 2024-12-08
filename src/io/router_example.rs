@@ -66,23 +66,26 @@ impl RouterHandler for ExampleRouterHandler {
 
 
 mod test {
-    use std::cell::Cell;
-
-    use crate::{io::{router::RouterBuilder, router_example::ExampleRouterHandler}, messages::requests::query_version_request::QueryVersionRequest};
+    use anyhow::Result;
+    use crate::{io::{router::RouterBuilder, router_example::ExampleRouterHandler}, messages::requests::{query_version_request::QueryVersionRequest, read_request::ReadRequest}};
 
 
     #[tokio::test]
-    async fn test_example_router() {
+    async fn test_example_router() -> Result<()> {
         let router1 = RouterBuilder::new(ExampleRouterHandler {}, Some("127.0.0.1:8080".to_string()));
-        let router2 = RouterBuilder::new(ExampleRouterHandler {}, Some("127.0.0.1:8081".to_string()));
-
-        tokio::spawn(async move {
-            router1.listen().await
-        });
+        let router2: RouterBuilder<ExampleRouterHandler> = RouterBuilder::new(ExampleRouterHandler {}, Some("127.0.0.1:8081".to_string()));
 
         tokio::spawn(async move {
             router2.listen().await
         });
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
+        router1.queue_request(ReadRequest {
+            key: "test".as_bytes().to_vec()
+        }, "127.0.0.1:8081".to_string()).await?;
+
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
+        Ok(())
     }
 }
