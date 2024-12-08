@@ -1,5 +1,5 @@
 
-use crate::messages::{requests::{
+use crate::messages::{message::MessagePayload, requests::{
     announce_shard_request::AnnounceShardRequest,
     get_client_shard_info_request::GetClientShardInfoRequest,
     query_version_request::QueryVersionRequest,
@@ -12,10 +12,10 @@ use crate::messages::{requests::{
     read_response::ReadResponse,
     write_response::WriteResponse
 }};
+use crate::io::write::write_message;
 use anyhow::{Result, anyhow, Ok};
 use tokio::{io::{AsyncReadExt, Interest}, net::{tcp::{OwnedReadHalf, OwnedWriteHalf, ReadHalf, WriteHalf}, unix::SocketAddr, TcpListener, TcpStream}, task::JoinHandle};
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
-
 
 /// Trait for handling callbacks to requests/responses from peers 
 pub trait RouterHandler {
@@ -56,27 +56,15 @@ impl<T: RouterHandler> RouterBuilder<T> {
         Self { handler, write_sockets: RefCell::new(HashMap::new()) }
     }
 
-    /// Functions for queueing outbound requests
-    fn queue_announce_shard_request(req: AnnounceShardRequest, peer: String) {
-
+    /// Function for queueing outbound requests
+    async fn queue_request<M: MessagePayload>(self: &Self, req: M, peer: String) -> Result<()> {
+        self.create_write_socket_if_needed(peer).await?;
+        let write_socket = self.write_sockets.borrow().get(&peer).unwrap();
+        write_message(write_socket, Box::new(req)).await?;
+        Ok(())
     }
-
-    fn queue_get_client_shard_info_request(req: GetClientShardInfoRequest, peer: String) {
-
-    }
-  
-    fn queue_query_version_request(req: QueryVersionRequest, peer: String) {
-
-    }
-  
-    fn queue_read_request(req: ReadRequest, peer: String) {
-
-    }
-  
-    fn queue_write_request(req: WriteRequest, peer: String) {
-
-    }
-
+    
+    /// Creates a write socket for a peer if it doesn't exist
     async fn create_write_socket_if_needed(&self, peer: String) -> Result<()> {
         // check if peer is already connected
         if !self.write_sockets.borrow().contains_key(&peer) {
