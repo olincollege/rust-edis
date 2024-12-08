@@ -18,6 +18,7 @@ use crate::messages::{
     },
 };
 use anyhow::{anyhow, Ok, Result};
+use async_recursion::async_recursion;
 use std::future::IntoFuture;
 use std::{cell::RefCell, sync::Arc};
 use tokio::{
@@ -90,9 +91,9 @@ impl<H: RouterHandler> RouterBuilder<H> {
     }
 
     /// Function for queueing outbound requests
-    pub async fn queue_request<M: MessagePayload>(write_sockets: Arc<HashMap<String, tokio::net::tcp::OwnedWriteHalf>>, handler: Arc<H>, req: M, peer: String) -> Result<()> {
-        Self::create_write_socket_if_needed(write_sockets.clone(), handler.clone(), peer.clone()).await?;
-        let mut write_socket = write_sockets.get_async(&peer).await.unwrap();
+    pub async fn queue_request<M: MessagePayload>(&self, req: M, peer: String) -> Result<()> {
+        Self::create_write_socket_if_needed(self.write_sockets.clone(), self.handler.clone(), peer.clone()).await?;
+        let mut write_socket = self.write_sockets.get_async(&peer).await.unwrap();
         write_message(&mut write_socket, Message {
            is_request: true,
            message_type: req.get_message_type(),
@@ -102,12 +103,21 @@ impl<H: RouterHandler> RouterBuilder<H> {
     }
 
     /// Function for queueing outbound responses
-    pub async fn queue_response<M: MessagePayload>(write_sockets: Arc<HashMap<String, tokio::net::tcp::OwnedWriteHalf>>, handler: Arc<H>, res: M, peer: String) -> Result<()> {
-        Self::queue_request(write_sockets, handler, res, peer).await?;
+    async fn queue_response<M: MessagePayload>(write_sockets: Arc<HashMap<String, tokio::net::tcp::OwnedWriteHalf>>, handler: Arc<H>, res: M, peer: String) -> Result<()> {
+        Self::create_write_socket_if_needed(write_sockets.clone(), handler.clone(), peer.clone()).await?;
+        let mut write_socket = write_sockets.get_async(&peer).await.unwrap();
+        write_message(&mut write_socket, Message {
+           is_request: false,
+           message_type: res.get_message_type(),
+           message_payload: res
+        }).await?;
         Ok(())
     }
 
     /// Creates a write socket for a peer if it doesn't exist
+    /// I don't understand the async recursion problem but something to do with how async builds state machines
+    /// https://www.reddit.com/r/rust/comments/kbu6bs/async_recursive_function_in_rust_using_futures/
+    #[async_recursion]
     async fn create_write_socket_if_needed(write_sockets: Arc<HashMap<String, tokio::net::tcp::OwnedWriteHalf>>, handler: Arc<H>, peer: String) -> Result<()> {
         // check if peer is already connected
         if !write_sockets.contains_async(&peer).await {

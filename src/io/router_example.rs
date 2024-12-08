@@ -1,7 +1,5 @@
-use crate::{messages::{requests::{announce_shard_request::AnnounceShardRequest, get_client_shard_info_request::GetClientShardInfoRequest, query_version_request::QueryVersionRequest, read_request::ReadRequest, write_request::WriteRequest}, responses::{announce_shard_response::AnnounceShardResponse, get_client_shard_info_response::GetClientShardInfoResponse, query_version_response::QueryVersionResponse, read_response::ReadResponse, write_response::WriteResponse}}};
+use crate::messages::{requests::{announce_shard_request::AnnounceShardRequest, get_client_shard_info_request::GetClientShardInfoRequest, get_shared_peers_request::GetSharedPeersRequest, query_version_request::QueryVersionRequest, read_request::ReadRequest, write_request::WriteRequest}, responses::{announce_shard_response::AnnounceShardResponse, get_client_shard_info_response::GetClientShardInfoResponse, get_shared_peers_response::GetSharedPeersResponse, query_version_response::QueryVersionResponse, read_response::ReadResponse, write_response::WriteResponse}};
 use crate::io::router::{RouterBuilder, RouterHandler};
-/* 
-
 struct ExampleRouterHandler {
 
 }
@@ -14,9 +12,7 @@ impl RouterHandler for ExampleRouterHandler {
         }
     }
 
-    fn handle_get_client_shard_info_request(
-        req: GetClientShardInfoRequest,
-    ) -> GetClientShardInfoResponse {
+    fn handle_get_client_shard_info_request(&self, req: &GetClientShardInfoRequest) -> GetClientShardInfoResponse {
         GetClientShardInfoResponse {
             num_write_shards: 0,
             write_shard_info: vec![],
@@ -24,44 +20,55 @@ impl RouterHandler for ExampleRouterHandler {
         }
     }
 
-    fn handle_query_version_request(req: QueryVersionRequest) -> QueryVersionResponse {
+    fn handle_query_version_request(&self, req: &QueryVersionRequest) -> QueryVersionResponse {
         QueryVersionResponse {
             version: 0,
         }
     }
 
-    fn handle_read_request(req: ReadRequest) -> ReadResponse {
+    fn handle_read_request(&self, req: &ReadRequest) -> ReadResponse {
         ReadResponse {
             value: vec![],
         }
     }
 
-    fn handle_write_request(req: WriteRequest) -> WriteResponse {
+    fn handle_write_request(&self, req: &WriteRequest) -> WriteResponse {
         WriteResponse {
             error: 0,
         }
     }
 
+    fn handle_get_shared_peers_request(&self, req: &GetSharedPeersRequest) -> GetSharedPeersResponse {
+        GetSharedPeersResponse {
+            peer_ips: vec![],
+        }
+    }
+
     /// Callbacks for handling responses to outbound requests
-    fn handle_announce_shard_response(res: AnnounceShardResponse) {
+    fn handle_announce_shard_response(&self, res: &AnnounceShardResponse) {
 
     }
 
-    fn handle_get_client_shard_info_response(res: GetClientShardInfoResponse) {
+    fn handle_get_client_shard_info_response(&self, res: &GetClientShardInfoResponse) {
         
     }
 
-    fn handle_query_version_response(res: QueryVersionResponse) {
+    fn handle_query_version_response(&self, res: &QueryVersionResponse) {
 
     }
 
-    fn handle_read_response(res: ReadResponse) {
+    fn handle_read_response(&self, res: &ReadResponse) {
 
     }
 
-    fn handle_write_response(res: WriteResponse) {
+    fn handle_write_response(&self, res: &WriteResponse) {
 
     }
+
+    fn handle_get_shared_peers_response(&self, res: &GetSharedPeersResponse) {
+
+    }   
+
 }
 
 
@@ -82,7 +89,7 @@ mod test {
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
         for _ in 0..3 {
-            router1.queue_request(ReadRequest {
+            router1.queue_request::<ReadRequest>(ReadRequest {
                 key: "test".as_bytes().to_vec()
             }, "127.0.0.1:8081".to_string()).await?;
             tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
@@ -92,4 +99,3 @@ mod test {
         Ok(())
     }
 }
-    */
