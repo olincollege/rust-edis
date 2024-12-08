@@ -8,6 +8,10 @@ impl MessagePayload for QueryVersionRequest {
         MessageType::QueryVersion
     }
 
+    fn is_request(&self) -> bool {
+        true
+    }
+
     fn serialize(&self) -> Result<Vec<u8>> {
         Ok(Vec::new())
     }

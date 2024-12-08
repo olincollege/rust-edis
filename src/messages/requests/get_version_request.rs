@@ -12,6 +12,11 @@ impl MessagePayload for GetVersionRequest {
     fn get_message_type(&self) -> MessageType {
         MessageType::GetVersion
     }
+
+    fn is_request(&self) -> bool {
+        true
+    }
+
     fn serialize(&self) -> Result<Vec<u8>> {
         let mut buffer = Vec::new();
         buffer.extend_from_slice(&self.version.to_le_bytes());

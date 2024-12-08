@@ -11,6 +11,10 @@ pub struct ReadResponse {
 /// | keylen  |   key  | valuelen|  value  |
 /// Integers are are always encoded in little-endian order
 impl MessagePayload for ReadResponse {
+    fn is_request(&self) -> bool {
+        false
+    }
+
     fn get_message_type(&self) -> MessageType {
         MessageType::Read
     }
