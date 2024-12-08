@@ -19,9 +19,12 @@ pub async fn read_message(stream: &mut OwnedReadHalf) -> Result<Box<dyn MessageP
         }
     };
 
+
     buffer[0..4].copy_from_slice(&total_length.to_le_bytes());
     buffer_idx += 4;
     let total_length = total_length as usize;
+    
+    println!("reading message length: {total_length}");
 
     // read the rest of the message
     while let Ok(bytes_read) = stream.read(&mut buffer[buffer_idx..]).await {

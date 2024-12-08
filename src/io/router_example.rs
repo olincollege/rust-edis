@@ -80,10 +80,11 @@ mod test {
         });
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
-        router1.queue_request(ReadRequest {
-            key: "test".as_bytes().to_vec()
-        }, "127.0.0.1:8081".to_string()).await?;
-
+        for _ in 0..100 {
+            router1.queue_request(ReadRequest {
+                key: "test".as_bytes().to_vec()
+            }, "127.0.0.1:8081".to_string()).await?;
+        }
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
         Ok(())

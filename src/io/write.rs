@@ -11,5 +11,6 @@ pub async fn write_message(
     let serialized = message.serialize()?;
     let serialized_buf = serialized.as_bytes();
     stream.write_all(serialized_buf).await?;
+    println!("finished writing!");
     Ok(())
 }

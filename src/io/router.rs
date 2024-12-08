@@ -113,9 +113,13 @@ impl<T: RouterHandler> RouterBuilder<T> {
         mut read: OwnedReadHalf,
     ) -> Result<()> {
         loop {
+            println!("waiting for read");
             read.readable().await?;
+            println!("done waiting for read");
             let message = read_message(&mut read).await?;
             let peer = read.peer_addr()?.to_string();
+
+            println!("read message");
 
             match message.get_message_type() {
                 MessageType::AnnounceShard => {
