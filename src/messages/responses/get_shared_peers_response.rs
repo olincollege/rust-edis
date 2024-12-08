@@ -12,6 +12,11 @@ impl MessagePayload for GetSharedPeersResponse {
     fn get_message_type(&self) -> MessageType {
         MessageType::GetSharedPeers
     }
+
+    fn is_request(&self) -> bool {
+        false
+    }
+
     fn serialize(&self) -> Result<Vec<u8>> {
         let mut buffer = Vec::new();
 

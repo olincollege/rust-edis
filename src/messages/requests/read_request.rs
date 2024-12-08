@@ -12,6 +12,11 @@ impl MessagePayload for ReadRequest {
     fn get_message_type(&self) -> MessageType {
         MessageType::Read
     }
+
+    fn is_request(&self) -> bool {
+        true
+    }
+
     fn serialize(&self) -> Result<Vec<u8>> {
         let key_len = u16::try_from(self.key.len()).context("key length overflow")?;
         let mut buffer = Vec::new();

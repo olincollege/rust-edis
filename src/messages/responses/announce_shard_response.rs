@@ -12,6 +12,11 @@ impl MessagePayload for AnnounceShardResponse {
     fn get_message_type(&self) -> MessageType {
         MessageType::AnnounceShard
     }
+
+    fn is_request(&self) -> bool {
+        false
+    }
+
     fn serialize(&self) -> Result<Vec<u8>> {
         let mut buffer = Vec::new();
 
