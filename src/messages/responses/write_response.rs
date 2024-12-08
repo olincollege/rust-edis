@@ -17,6 +17,10 @@ pub struct WriteResponse {
 /// | 1 byte |
 /// | error |
 impl MessagePayload for WriteResponse {
+    fn is_request(&self) -> bool {
+        false
+    }
+
     fn get_message_type(&self) -> MessageType {
         MessageType::Write
     }

@@ -1,7 +1,5 @@
-pub mod messages;
 pub mod io;
-
-use crate::io::read_write::read_message;
+pub mod messages;
 
 fn main() {
     println!("Hello, world!");

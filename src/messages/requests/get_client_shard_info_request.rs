@@ -4,6 +4,10 @@ use anyhow::Result;
 pub struct GetClientShardInfoRequest {}
 
 impl MessagePayload for GetClientShardInfoRequest {
+    fn is_request(&self) -> bool {
+        true
+    }
+
     fn get_message_type(&self) -> MessageType {
         MessageType::GetClientShardInfo
     }

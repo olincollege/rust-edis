@@ -23,6 +23,11 @@ impl MessagePayload for GetVersionResponse {
     fn get_message_type(&self) -> MessageType {
         MessageType::GetVersion
     }
+
+    fn is_request(&self) -> bool {
+        false
+    }
+
     fn serialize(&self) -> Result<Vec<u8>> {
         let mut buffer = Vec::new();
         buffer.push(self.error);
@@ -57,11 +62,7 @@ impl MessagePayload for GetVersionResponse {
             .get(3 + key_len + 2..3 + key_len + 2 + value_len)
             .context("failed to get value")?
             .to_vec();
-        Ok(GetVersionResponse {
-            error,
-            key,
-            value,
-        })
+        Ok(GetVersionResponse { error, key, value })
     }
 }
 

@@ -11,6 +11,10 @@ pub struct AnnounceShardRequest {
 /// | 1 byte  | 16 bytes | 2 bytes |
 /// | Shard Type |   IP    |   port  |
 impl MessagePayload for AnnounceShardRequest {
+    fn is_request(&self) -> bool {
+        true
+    }
+
     fn get_message_type(&self) -> MessageType {
         MessageType::AnnounceShard
     }

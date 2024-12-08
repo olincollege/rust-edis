@@ -9,6 +9,10 @@ pub struct QueryVersionResponse {
 }
 
 impl MessagePayload for QueryVersionResponse {
+    fn is_request(&self) -> bool {
+        false
+    }
+
     fn get_message_type(&self) -> MessageType {
         MessageType::QueryVersion
     }
