@@ -66,32 +66,23 @@ impl RouterHandler for ExampleRouterHandler {
 
 
 mod test {
+    use std::cell::Cell;
+
     use crate::{io::{router::RouterBuilder, router_example::ExampleRouterHandler}, messages::requests::query_version_request::QueryVersionRequest};
 
 
     #[tokio::test]
     async fn test_example_router() {
-        // localset is just used here for testing only
-        // this is because the router itself is not send
-        // normally awaiting the listen() is the last line of the main function so there is no further controll flow
-        let local = tokio::task::LocalSet::new();
-
         let router1 = RouterBuilder::new(ExampleRouterHandler {}, Some("127.0.0.1:8080".to_string()));
-        
+        let router2 = RouterBuilder::new(ExampleRouterHandler {}, Some("127.0.0.1:8081".to_string()));
+
         tokio::spawn(async move {
-            let router2 = RouterBuilder::new(ExampleRouterHandler {}, Some("127.0.0.1:8081".to_string()));
-            router2.listen().await.unwrap();
+            router1.listen().await
         });
 
-        // add the routers to listen on different ports
-          local.spawn_local(async move {
-            router1.listen().await.unwrap();
+        tokio::spawn(async move {
+            router2.listen().await
         });
 
-
-        // force the localset to to start executing the listeners for router1/router2
-        local.run_until(async move {    
-            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-        }).await;
     }
 }

@@ -16,7 +16,7 @@ use crate::messages::{
     },
 };
 use anyhow::{anyhow, Ok, Result};
-use std::{cell::RefCell, collections::HashMap, sync::Arc};
+use std::{cell::RefCell, sync::Arc};
 use tokio::{
     io::{AsyncReadExt, Interest},
     net::{
@@ -26,6 +26,8 @@ use tokio::{
     },
     task::JoinHandle,
 };
+use scc::HashMap;
+
 
 use super::read::read_message;
 
@@ -60,7 +62,7 @@ pub struct RouterBuilder<T: RouterHandler>
 {
     pub handler: Arc<T>,
     /// Map of peer addresses to write sockets
-    pub write_sockets: Arc<RefCell<HashMap<String, OwnedWriteHalf>>>,
+    pub write_sockets: Arc<HashMap<String, tokio::net::tcp::OwnedWriteHalf>>,
 
     pub bind_addr: Option<String>,
 }
@@ -71,7 +73,7 @@ impl<T: RouterHandler> RouterBuilder<T> {
     pub fn new(handler: T, bind_addr: Option<String>) -> Self {
         Self {
             handler: Arc::new(handler),
-            write_sockets: Arc::new(RefCell::new(HashMap::new())),
+            write_sockets: Arc::new(scc::HashMap::new()),
             bind_addr,
         }
     }
@@ -79,8 +81,7 @@ impl<T: RouterHandler> RouterBuilder<T> {
     /// Function for queueing outbound requests
     pub async fn queue_request<M: MessagePayload>(&self, req: M, peer: String) -> Result<()> {
         self.create_write_socket_if_needed(peer.clone()).await?;
-        let mut write_sockets = self.write_sockets.borrow_mut();
-        let mut write_socket = write_sockets.get_mut(&peer).unwrap();
+        let mut write_socket = self.write_sockets.get_async(&peer).await.unwrap();
         write_message(&mut write_socket, Box::new(req)).await?;
         Ok(())
     }
@@ -88,12 +89,12 @@ impl<T: RouterHandler> RouterBuilder<T> {
     /// Creates a write socket for a peer if it doesn't exist
     async fn create_write_socket_if_needed(self: &Self, peer: String) -> Result<()> {
         // check if peer is already connected
-        if !self.write_sockets.borrow().contains_key(&peer) {
+        if !self.write_sockets.contains_async(&peer).await {
             let stream = TcpStream::connect(peer.clone()).await?;
             let (read, write) = stream.into_split();
 
             // push the write half to the map
-            self.write_sockets.borrow_mut().insert(peer.clone(), write);
+            self.write_sockets.insert_async(peer.clone(), write);
 
             // bind the read half to a background task
             let handler = self.handler.clone();
@@ -143,8 +144,7 @@ impl<T: RouterHandler> RouterBuilder<T> {
 
             // new peer discovered, add to our list of write sockets
             self.write_sockets
-                .borrow_mut()
-                .insert(addr.to_string(), write);
+                .insert_async(addr.to_string(), write).await.unwrap();
 
             // bind the read half to a background task
             let handler = self.handler.clone();
