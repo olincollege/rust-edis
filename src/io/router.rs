@@ -1,5 +1,4 @@
-
-use crate::messages::{message::MessagePayload, requests::{
+use crate::messages::{message::{MessagePayload, MessageType}, requests::{
     announce_shard_request::AnnounceShardRequest,
     get_client_shard_info_request::GetClientShardInfoRequest,
     query_version_request::QueryVersionRequest,
@@ -12,15 +11,18 @@ use crate::messages::{message::MessagePayload, requests::{
     read_response::ReadResponse,
     write_response::WriteResponse
 }};
+use crate::messages::message::AsAny;
 use crate::io::write::write_message;
 use anyhow::{Result, anyhow, Ok};
 use tokio::{io::{AsyncReadExt, Interest}, net::{tcp::{OwnedReadHalf, OwnedWriteHalf, ReadHalf, WriteHalf}, unix::SocketAddr, TcpListener, TcpStream}, task::JoinHandle};
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
+use super::read::read_message;
+
 /// Trait for handling callbacks to requests/responses from peers 
-pub trait RouterHandler {
+pub trait RouterHandler: Send + Sync + 'static {
     /// Callback for handling new requests
-    fn handle_announce_shard_request(req: AnnounceShardRequest) -> AnnounceShardResponse;
+    fn handle_announce_shard_request(&self, req: &AnnounceShardRequest) -> AnnounceShardResponse;
 
     fn handle_get_client_shard_info_request(req: GetClientShardInfoRequest) -> GetClientShardInfoResponse;
 
@@ -44,28 +46,32 @@ pub trait RouterHandler {
 }
 
 
-struct RouterBuilder<T: RouterHandler> {
-    handler: T,
+struct RouterBuilder<T>
+where
+    T: RouterHandler,
+{
+    pub handler: Arc<T>,
     /// Map of peer addresses to write sockets
-    write_sockets: RefCell<HashMap<String, OwnedWriteHalf>>,
+    pub write_sockets: RefCell<HashMap<String, OwnedWriteHalf>>,
 
 }
 
 impl<T: RouterHandler> RouterBuilder<T> {
     pub fn new(handler: T) -> Self {
-        Self { handler, write_sockets: RefCell::new(HashMap::new()) }
+        Self { handler: Arc::new(handler), write_sockets: RefCell::new(HashMap::new()) }
     }
 
     /// Function for queueing outbound requests
-    async fn queue_request<M: MessagePayload>(self: &Self, req: M, peer: String) -> Result<()> {
-        self.create_write_socket_if_needed(peer).await?;
-        let write_socket = self.write_sockets.borrow().get(&peer).unwrap();
-        write_message(write_socket, Box::new(req)).await?;
+    async fn queue_request<M: MessagePayload>(&self, req: M, peer: String) -> Result<()> {
+        self.create_write_socket_if_needed(peer.clone()).await?;
+        let mut write_sockets = self.write_sockets.borrow_mut();
+        let mut write_socket = write_sockets.get_mut(&peer).unwrap();
+        write_message(&mut write_socket, Box::new(req)).await?;
         Ok(())
     }
     
     /// Creates a write socket for a peer if it doesn't exist
-    async fn create_write_socket_if_needed(&self, peer: String) -> Result<()> {
+    async fn create_write_socket_if_needed(self: &Self, peer: String) -> Result<()> {
         // check if peer is already connected
         if !self.write_sockets.borrow().contains_key(&peer) {
             let stream = TcpStream::connect(peer.clone()).await?;
@@ -75,8 +81,9 @@ impl<T: RouterHandler> RouterBuilder<T> {
             self.write_sockets.borrow_mut().insert(peer.clone(), write);
 
             // bind the read half to a background task
+            let handler = self.handler.clone();
             tokio::spawn(async move {
-                Self::listen_read_half_socket(read).await?;
+                Self::listen_read_half_socket(handler, read).await?;
                 Ok(())
             });
         }
@@ -84,12 +91,21 @@ impl<T: RouterHandler> RouterBuilder<T> {
     }
 
     /// Listens for inbound requests on the read half of a socket from a peer
-    async fn listen_read_half_socket(mut read: OwnedReadHalf) -> Result<()> {
-        let mut buf = [0; 1024];
+    async fn listen_read_half_socket<R: RouterHandler>(handler: Arc<R>, mut read: OwnedReadHalf) -> Result<()> {
         loop {
             read.readable().await?;
-            read.read(&mut buf).await?;
-            read.peer_addr()?;
+            let message = read_message(&mut read).await?;
+            let peer = read.peer_addr()?.to_string();
+
+            match message.get_message_type() {
+                MessageType::AnnounceShard => {
+                    let req = message.as_any().downcast_ref::<AnnounceShardRequest>().unwrap();
+                    let res = handler.handle_announce_shard_request(req);
+                }
+                _ => {
+                    return Err(anyhow::anyhow!("unhandled message type"));
+                }
+            }
         }
     }
 
@@ -107,11 +123,11 @@ impl<T: RouterHandler> RouterBuilder<T> {
             self.write_sockets.borrow_mut().insert(addr.to_string(), write);
             
             // bind the read half to a background task
+            let handler = self.handler.clone();
             tokio::spawn(async move {
-                Self::listen_read_half_socket(read).await?;
+                Self::listen_read_half_socket(handler, read).await?;
                 Ok(())
             });
         }
-        Ok(())
     }
 }

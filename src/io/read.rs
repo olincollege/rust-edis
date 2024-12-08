@@ -1,11 +1,11 @@
 use async_smux::{MuxStream};
 use anyhow::Result;
-use tokio::{io::{AsyncReadExt}, net::TcpStream};
+use tokio::{io::AsyncReadExt, net::{tcp::OwnedReadHalf, TcpStream}};
 
 
 use crate::messages::message::{bytes_as_message, MessagePayload};
 
-pub async fn read_message(mut stream: MuxStream<TcpStream>) -> Result<Box<dyn MessagePayload>> {
+pub async fn read_message(stream: &mut OwnedReadHalf) -> Result<Box<dyn MessagePayload>> {
     let mut buffer = [0; 4096];
     let mut buffer_idx = 0;
 

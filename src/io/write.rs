@@ -1,6 +1,12 @@
-pub async fn write_message(mut stream: MuxStream<TcpStream>, message: Box<dyn MessagePayload>) -> Result<()> {
+use tokio::{io::AsyncWriteExt, net::tcp::OwnedWriteHalf};
+use zerocopy::IntoBytes;
+use anyhow::Result;
+
+use crate::messages::message::MessagePayload;
+
+pub async fn write_message(stream: &mut OwnedWriteHalf, message: Box<dyn MessagePayload>) -> Result<()> {
     let serialized = message.serialize()?;
-    let mut serialized_buf = serialized.as_bytes();
-    stream.write_all_buf(&mut serialized_buf).await?;
+    let serialized_buf = serialized.as_bytes();
+    stream.write_all(serialized_buf).await?;
     Ok(())
 }

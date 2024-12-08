@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use int_enum::IntEnum;
+use std::any::Any;
 
 use super::requests::{
     get_client_shard_info_request::GetClientShardInfoRequest,
@@ -26,7 +27,7 @@ pub enum MessageType {
     GetSharedPeers = 6,     // 6 - get shared peers
 }
 
-pub trait MessagePayload {
+pub trait MessagePayload: AsAny {
     fn is_request(&self) -> bool;
     fn get_message_type(&self) -> MessageType;
     fn serialize(&self) -> Result<Vec<u8>>;
@@ -34,6 +35,15 @@ pub trait MessagePayload {
     where
         Self: Sized;
 }
+pub trait AsAny: Any {
+    fn as_any(&self) -> &dyn Any;
+}
+impl<T: Any> AsAny for T {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
 
 pub fn bytes_as_message(buffer: &[u8]) -> Result<Box<dyn MessagePayload>> {
     let message_type =
