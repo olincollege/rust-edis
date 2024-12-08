@@ -56,25 +56,28 @@ pub trait RouterHandler: Send + Sync + 'static {
     fn handle_write_response(res: WriteResponse);
 }
 
-struct RouterBuilder<T>
-where
-    T: RouterHandler,
+pub struct RouterBuilder<T: RouterHandler>
 {
     pub handler: Arc<T>,
     /// Map of peer addresses to write sockets
-    pub write_sockets: RefCell<HashMap<String, OwnedWriteHalf>>,
+    pub write_sockets: Arc<RefCell<HashMap<String, OwnedWriteHalf>>>,
+
+    pub bind_addr: Option<String>,
 }
 
+unsafe impl<T: RouterHandler> Send for RouterBuilder<T> {}
+
 impl<T: RouterHandler> RouterBuilder<T> {
-    pub fn new(handler: T) -> Self {
+    pub fn new(handler: T, bind_addr: Option<String>) -> Self {
         Self {
             handler: Arc::new(handler),
-            write_sockets: RefCell::new(HashMap::new()),
+            write_sockets: Arc::new(RefCell::new(HashMap::new())),
+            bind_addr,
         }
     }
 
     /// Function for queueing outbound requests
-    async fn queue_request<M: MessagePayload>(&self, req: M, peer: String) -> Result<()> {
+    pub async fn queue_request<M: MessagePayload>(&self, req: M, peer: String) -> Result<()> {
         self.create_write_socket_if_needed(peer.clone()).await?;
         let mut write_sockets = self.write_sockets.borrow_mut();
         let mut write_socket = write_sockets.get_mut(&peer).unwrap();
@@ -128,8 +131,9 @@ impl<T: RouterHandler> RouterBuilder<T> {
     }
 
     /// Makes the router start listening for inbound requests
-    async fn listen(&self) -> Result<()> {
-        let listener = TcpListener::bind("127.0.0.1:8080").await?;
+    pub async fn listen(&self) -> Result<()> {
+        let listener = TcpListener::bind(self.bind_addr.as_deref().unwrap_or("127.0.0.1:0")).await?;
+        println!("listening on {}", listener.local_addr()?);
 
         loop {
             //let (mut socket, addr) = Arc::new(listener.accept().await?);
