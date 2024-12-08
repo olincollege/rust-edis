@@ -96,14 +96,17 @@ impl<T: MessagePayload> Message<T> {
         let mut buffer = Vec::new();
 
         let message_type: u8 = self.message_type as u8;
+        let is_request: u8 = if self.is_request { 1 } else { 0 };
         let message_payload = self.message_payload.serialize()?;
         let total_length: u32 = 0;
         let total_length = (size_of_val(&total_length)
             + size_of_val(&message_type)
+            + size_of_val(&is_request)
             + message_payload.len()) as u32;
 
         buffer.extend_from_slice(&total_length.to_le_bytes());
         buffer.extend_from_slice(&message_type.to_le_bytes());
+        buffer.extend_from_slice(&is_request.to_le_bytes());
         buffer.extend_from_slice(&message_payload);
         Ok(buffer)
     }
@@ -129,7 +132,7 @@ impl<T: MessagePayload> Message<T> {
         ) == 1;
         let message_type = MessageType::try_from(message_type_bytes)
             .map_err(|_| anyhow::anyhow!("invalid message type"))?;
-        let header_length = size_of_val(&total_length) + size_of_val(&message_type) + size_of_val(&is_request);
+        let header_length = size_of_val(&total_length) + size_of_val(&message_type) + 1;
         let payload_length = (total_length as usize) - header_length;
 
         let message_payload = T::deserialize(
@@ -171,5 +174,6 @@ mod tests {
             message.message_payload.value,
             deserialized.message_payload.value
         );
+        assert_eq!(message.is_request, deserialized.is_request);
     }
 }
