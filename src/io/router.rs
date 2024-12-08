@@ -81,7 +81,7 @@ pub struct RouterBuilder<H: RouterHandler>
 
 /// Owned struct returned from RouterBuilder that allows for
 /// the implementer of RouterHandler to send outbound requests
-/// RouterClient implements clone so that multiple async workers can own it concurrently
+/// Returned from get_client_router() in RouterHandler
 pub struct RouterClient<H: RouterHandler> {
     pub handler: Arc<H>,
 
@@ -104,15 +104,6 @@ impl<H: RouterHandler> RouterClient<H> {
     }
 }
 
-impl<H: RouterHandler> Clone for RouterClient<H> {
-    fn clone(&self) -> Self {
-        RouterClient {
-            handler: self.handler.clone(),
-            write_sockets: self.write_sockets.clone()
-        }
-    }
-}
-
 unsafe impl<H: RouterHandler> Send for RouterBuilder<H> {}
 
 impl<H: RouterHandler> RouterBuilder<H> {
@@ -121,6 +112,13 @@ impl<H: RouterHandler> RouterBuilder<H> {
             handler: Arc::new(handler),
             write_sockets: Arc::new(scc::HashMap::new()),
             bind_addr,
+        }
+    }
+
+    pub fn get_router_client(&self) -> RouterClient<H> {
+        RouterClient {
+            handler: self.handler.clone(),
+            write_sockets: self.write_sockets.clone()
         }
     }
 
