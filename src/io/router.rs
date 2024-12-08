@@ -79,6 +79,40 @@ pub struct RouterBuilder<H: RouterHandler>
     pub bind_addr: Option<String>,
 }
 
+/// Owned struct returned from RouterBuilder that allows for
+/// the implementer of RouterHandler to send outbound requests
+/// RouterClient implements clone so that multiple async workers can own it concurrently
+pub struct RouterClient<H: RouterHandler> {
+    pub handler: Arc<H>,
+
+    /// Map of peer addresses to write sockets
+    /// ownership is retained on a per-key basis under async lock
+    pub write_sockets: Arc<HashMap<String, tokio::net::tcp::OwnedWriteHalf>>,
+}
+
+impl<H: RouterHandler> RouterClient<H> {
+    /// Function for queueing outbound requests
+    pub async fn queue_request<M: MessagePayload>(&self, req: M, peer: String) -> Result<()> {
+        RouterBuilder::create_write_socket_if_needed(self.write_sockets.clone(), self.handler.clone(), peer.clone()).await?;
+        let mut write_socket = self.write_sockets.get_async(&peer).await.unwrap();
+        write_message(&mut write_socket, Message {
+           is_request: true,
+           message_type: req.get_message_type(),
+           message_payload: req
+        }).await?;
+        Ok(())
+    }
+}
+
+impl<H: RouterHandler> Clone for RouterClient<H> {
+    fn clone(&self) -> Self {
+        RouterClient {
+            handler: self.handler.clone(),
+            write_sockets: self.write_sockets.clone()
+        }
+    }
+}
+
 unsafe impl<H: RouterHandler> Send for RouterBuilder<H> {}
 
 impl<H: RouterHandler> RouterBuilder<H> {
@@ -90,18 +124,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
         }
     }
 
-    /// Function for queueing outbound requests
-    pub async fn queue_request<M: MessagePayload>(&self, req: M, peer: String) -> Result<()> {
-        Self::create_write_socket_if_needed(self.write_sockets.clone(), self.handler.clone(), peer.clone()).await?;
-        let mut write_socket = self.write_sockets.get_async(&peer).await.unwrap();
-        write_message(&mut write_socket, Message {
-           is_request: true,
-           message_type: req.get_message_type(),
-           message_payload: req
-        }).await?;
-        Ok(())
-    }
-
+    
     /// Function for queueing outbound responses
     async fn queue_response<M: MessagePayload>(write_sockets: Arc<HashMap<String, tokio::net::tcp::OwnedWriteHalf>>, handler: Arc<H>, res: M, peer: String) -> Result<()> {
         Self::create_write_socket_if_needed(write_sockets.clone(), handler.clone(), peer.clone()).await?;
@@ -281,7 +304,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
     /// Makes the router start listening for inbound requests
     pub async fn listen(&self) -> Result<()> {
         let listener = TcpListener::bind(self.bind_addr.as_deref().unwrap_or("127.0.0.1:0")).await?;
-        //println!("listening on {}", listener.local_addr()?);
+        println!("listening on {}", listener.local_addr()?);
 
         loop {
             //let (mut socket, addr) = Arc::new(listener.accept().await?);

@@ -37,33 +37,28 @@ impl RouterHandler for InfoRouter {
     fn handle_announce_shard_request(&self, req: &AnnounceShardRequest) -> AnnounceShardResponse {
         unimplemented!()
     }
+    fn handle_announce_shard_response(&self, res: &AnnounceShardResponse) {
+        unimplemented!()
+    }
 
     fn handle_get_client_shard_info_request(&self, req: &GetClientShardInfoRequest) -> GetClientShardInfoResponse {
         unimplemented!()
     }
 
+    /// Info server does not handle requests in relation to the actual key/value state
+    /// we could change this to return an error response in the future
     fn handle_query_version_request(&self, req: &QueryVersionRequest) -> QueryVersionResponse {
         unimplemented!()
     }
-
-    fn handle_read_request(&self, req: &ReadRequest) -> ReadResponse {
-        ReadResponse {
-            value: vec![1,2,3,4],
-        }
-    }
-
-    fn handle_write_request(&self, req: &WriteRequest) -> WriteResponse {
-        unimplemented!()
-    }
+    fn handle_read_request(&self, req: &ReadRequest) -> ReadResponse {unimplemented!()}
+    fn handle_write_request(&self, req: &WriteRequest) -> WriteResponse {unimplemented!()}
 
     fn handle_get_shared_peers_request(&self, req: &GetSharedPeersRequest) -> GetSharedPeersResponse {
         unimplemented!()
     }
 
     /// Callbacks for handling responses to outbound requests
-    fn handle_announce_shard_response(&self, res: &AnnounceShardResponse) {
-        unimplemented!()
-    }
+    
 
     fn handle_get_client_shard_info_response(&self, res: &GetClientShardInfoResponse) {
         unimplemented!()
