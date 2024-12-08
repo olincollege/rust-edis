@@ -19,9 +19,19 @@ use messages::responses::write_response::WriteResponse;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
+use anyhow::{Result};
 
 struct InfoRouter {
 }
+
+impl InfoRouter {
+    pub fn new() -> Self {
+        InfoRouter {
+
+        }
+    }
+}
+
 impl RouterHandler for InfoRouter {
     /// Callback for handling new requests
     fn handle_announce_shard_request(&self, req: &AnnounceShardRequest) -> AnnounceShardResponse {
@@ -77,6 +87,11 @@ impl RouterHandler for InfoRouter {
 
 
 #[tokio::main] 
-async fn main() {
-
+async fn main() -> Result<()> {
+    let info_router = InfoRouter::new();
+    let info_server = RouterBuilder::new(info_router, None);
+    tokio::spawn(async move {
+        info_server.listen().await?;
+        Ok(())
+    }).await?
 }
