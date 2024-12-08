@@ -1,121 +1,118 @@
-use anyhow::Result;
+use anyhow::{Ok, Result};
+use rand::Rng;
 use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::Mutex;
+use std::net::SocketAddr;
 use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
     time::{sleep, Duration},
 };
+mod io;
+use io::read_write::{read_message, write_message};
 
 mod messages;
-use messages::{
-    get_version_request::GetVersionRequest,
-    get_version_response::GetVersionResponse,
-    message::{MessagePayload, MessageType},
-    query_version_request::QueryVersionRequest,
-    query_version_response::QueryVersionResponse,
-};
+
+static MAIN_INSTANCE_IP_PORT: ([u8; 16], u16) =
+    ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 8080);
 
 pub struct ReadShard {
-    reader_ip_port: String,
-    writer_ip_port: String,
+    reader_ip_port: SocketAddr,
+    writer_id: u16,
+    writer_ip_port: ([u8; 16], u16),
+    peers: Vec<([u8; 16], u16)>,
     current_version: u64,
-    data: HashMap<u64, HashMap<String, String>>,
+    history: Vec<(String, String)>,
+    data: HashMap<String, String>,
 }
 
 impl ReadShard {
     pub fn new(
-        reader_ip_port: String,
-        writer_ip_port: String,
-        current_version: u64,
-        data: HashMap<u64, HashMap<String, String>>,
+        reader_ip_port: SocketAddr,
+        writer_ip_port: ([u8; 16], u16),
+        writer_id: u16,
     ) -> ReadShard {
         ReadShard {
             reader_ip_port,
+            writer_id,
             writer_ip_port,
-            current_version,
-            data,
+            peers: Vec::new(),
+            current_version: 0,
+            history: Vec::new(),
+            data: HashMap::new(),
         }
     }
 
-    // Update only from the write shard. Will have to find a way to catchup from read shards too
-    pub async fn update_shard_from_write(&mut self) -> Result<()> {
-        let mut stream = TcpStream::connect(&self.writer_ip_port).await?;
+    pub async fn announce_shard(&mut self) -> Result<()> {
+        // Sends its ip port
 
+        // Gets a response
+        let response: u16 = 1;
+
+        self.writer_id = response;
+
+        Ok(())
+    }
+
+    pub async fn update_shard_from_peers(&mut self) -> Result<()> {
         loop {
-            sleep(Duration::from_secs(3)).await;
+            // TODO: get list of ports and update the peers list
+            let mut rnd = rand::thread_rng();
+            let update_shard_addr = self.peers[rnd.gen_range(0..self.peers.len())];
 
-            let request = QueryVersionRequest {};
-            let serialized_request = request.serialize()?;
-            stream.write_all(&serialized_request).await?;
+            // TODO: request for version
+            let response_version = 1;
+            if response_version > self.current_version {
+                // TODO: request for data of the next version from the shard
+                let response = ("key".to_string(), "value".to_string());
+                let response_clone = response.clone();
 
-            let mut buffer = [0u8; 1024];
-            let n = stream.read(&mut buffer).await?;
-            if n == 0 {
-                continue;
+                self.data.insert(response.0, response.1);
+                self.history.push(response_clone);
+                self.current_version += 1
             }
-
-            let response = QueryVersionResponse::deserialize(&buffer[0..n])?;
-
-            if response.version > self.current_version {
-                let request = GetVersionRequest {
-                    version: self.current_version + 1,
-                };
-                let serialized_request = request.serialize()?;
-                stream.write_all(&serialized_request).await?;
-
-                let mut buffer = [0u8; 1024];
-                let n = stream.read(&mut buffer).await?;
-                if n == 0 {
-                    continue;
-                }
-
-                let response = GetVersionResponse::deserialize(&buffer[0..n])?;
-
-                if response.error != 0 {
-                    let mut present_data = self
-                        .data
-                        .get(&self.current_version)
-                        .cloned()
-                        .unwrap_or_else(HashMap::new);
-
-                    present_data.insert(
-                        String::from_utf8(response.key)?,
-                        String::from_utf8(response.value)?,
-                    );
-                    self.current_version += 1;
-
-                    self.data.insert(self.current_version, present_data);
-                }
-            }
+            sleep(Duration::from_secs(2)).await;
         }
     }
 
     pub async fn get_value(&self, key: &str) -> Option<&String> {
-        let present_data = self.data.get(&self.current_version).unwrap();
-        present_data.get(key)
+        self.data.get(&key.to_string())
     }
 }
 
+pub fn socket_addr_to_string(addr: ([u8; 16], u16)) -> String {
+    format!(
+        "{}:{}",
+        addr.0
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>()
+            .join("."),
+        addr.1
+    )
+}
+
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<()> {
     let listener = TcpListener::bind("127.0.0.1:0").await?;
 
     let reader_addr = listener.local_addr().unwrap();
-    let writer_addr = "127.0.0.1:0".to_string();
+    // Request for peers addr
 
-    let shard = Arc::new(Mutex::new(ReadShard::new(
-        reader_addr.to_string(),
-        writer_addr,
-        0,
-        HashMap::new(),
-    )));
+    let writer_addr = ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 8080);
+    let writer_num = 1;
 
-    let shard_clone = Arc::clone(&shard);
+    let mut reader_shard = ReadShard::new(reader_addr, writer_addr, writer_num);
+
     tokio::spawn(async move {
-        let mut shard_lock = shard_clone.lock().await;
-        shard_lock.update_shard_from_write().await.unwrap();
+        reader_shard.announce_shard().await.unwrap();
+    });
+
+    tokio::spawn(async move {
+        reader_shard.update_shard_from_peers().await.unwrap();
+    });
+
+    // Check if request asks to read and then send value to client
+    tokio::spawn(async move {
+        reader_shard.get_value("key");
     });
 
     Ok(())
