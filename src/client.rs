@@ -46,23 +46,58 @@ impl Client {
 }
 
 impl RouterHandler for Client {
-    fn handle_write_request(&self, req: &WriteRequest) -> WriteResponse {
-        println!(
-            "Sending write request to server: key = {}, value = {}",
-            String::from_utf8_lossy(&req.key),
-            String::from_utf8_lossy(&req.value)
-        );
-        WriteResponse { error: 0 } // Simulated response
+    fn handle_write_request(&self, _req: &WriteRequest) -> WriteResponse {
+        unimplemented!()
     }
 
-    fn handle_read_request(&self, req: &ReadRequest) -> ReadResponse {
-        println!(
-            "Sending read request to server: key = {}",
-            String::from_utf8_lossy(&req.key)
-        );
-        ReadResponse {
-            value: b"Simulated value".to_vec(),
-        } // Simulated response
+    fn handle_read_request(&self, _req: &ReadRequest) -> ReadResponse {
+        unimplemented!()
+    }
+
+    fn handle_get_client_shard_info_response(&self, res: &GetClientShardInfoResponse) {
+        println!("Received shard information from main info server:");
+
+        let num_write_shards = res.num_write_shards as usize;
+        let write_shard_info: Vec<(String, u16)> = res
+            .write_shard_info
+            .iter()
+            .map(|(ip, port)| (format!("{}.{}.{}.{}", ip[0], ip[1], ip[2], ip[3]), *port))
+            .collect();
+
+        let read_shard_info: Vec<(String, u16)> = res
+            .read_shard_info
+            .iter()
+            .map(|(ip, port)| (format!("{}.{}.{}.{}", ip[0], ip[1], ip[2], ip[3]), *port))
+            .collect();
+
+        println!("Number of write shards: {}", num_write_shards);
+        println!("Write Shards: {:?}", write_shard_info);
+        println!("Read Shards: {:?}", read_shard_info);
+
+        // Update the client state
+        let mut shard_state = self.shard_state.lock().unwrap();
+        shard_state.num_write_shards = num_write_shards;
+        shard_state.write_shard_info = write_shard_info;
+        shard_state.read_shard_info = read_shard_info;
+    }
+
+    fn handle_write_response(&self, res: &WriteResponse) {
+        match res.error {
+            0 => println!("Write operation successful."),
+            _ => eprintln!("Write operation failed with error code: {}", res.error),
+        }
+    }
+
+    fn handle_read_response(&self, res: &ReadResponse) {
+        if res.value.is_empty() {
+            println!("Key not found or value is empty.");
+        } else {
+            println!(
+                "Read operation successful. Key: {}, Value: {}",
+                String::from_utf8_lossy(&res.key),
+                String::from_utf8_lossy(&res.value)
+            );
+        }
     }
 
     fn handle_query_version_request(&self, _req: &QueryVersionRequest) -> QueryVersionResponse {
@@ -92,18 +127,11 @@ impl RouterHandler for Client {
     fn handle_announce_shard_response(&self, _res: &AnnounceShardResponse) {
         unimplemented!()
     }
-    fn handle_get_client_shard_info_response(&self, _res: &GetClientShardInfoResponse) {
-        unimplemented!()
-    }
+
     fn handle_query_version_response(&self, _res: &QueryVersionResponse) {
         unimplemented!()
     }
-    fn handle_read_response(&self, _res: &ReadResponse) {
-        unimplemented!()
-    }
-    fn handle_write_response(&self, _res: &WriteResponse) {
-        unimplemented!()
-    }
+
     fn handle_get_shared_peers_response(&self, _res: &GetSharedPeersResponse) {
         unimplemented!()
     }
@@ -138,7 +166,11 @@ async fn main() -> Result<()> {
             loop {
                 let request = GetClientShardInfoRequest {}; // Assuming this struct exists
                 if let Err(err) = client_router
-                    .queue_request(request, main_info_server.to_string())
+                    .get_router_client()
+                    .queue_request::<GetClientShardInfoRequest>(
+                        request,
+                        main_info_server.to_string(),
+                    )
                     .await
                 {
                     eprintln!("Failed to fetch shard info: {}", err);
@@ -191,7 +223,11 @@ async fn main() -> Result<()> {
                         None,
                     );
 
-                    if let Err(err) = client_router.queue_request(request, target).await {
+                    if let Err(err) = client_router
+                        .get_router_client()
+                        .queue_request::<WriteRequest>(request, target)
+                        .await
+                    {
                         eprintln!("Failed to queue write request: {}", err);
                     } else {
                         println!("OK");
@@ -222,7 +258,11 @@ async fn main() -> Result<()> {
                         None,
                     );
 
-                    if let Err(err) = client_router.queue_request(request, target).await {
+                    if let Err(err) = client_router
+                        .get_router_client()
+                        .queue_request::<ReadRequest>(request, target)
+                        .await
+                    {
                         eprintln!("Failed to queue read request: {}", err);
                     } else {
                         println!(
