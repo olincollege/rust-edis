@@ -167,12 +167,6 @@ pub fn socket_addr_to_string(addr: ([u8; 16], u16)) -> String {
     )
 }
 
-pub fn choose_peer(peers: Vec<([u8; 16], u16)>) -> ([u8; 16], u16) {
-    let mut rng = rand::thread_rng();
-    let index = rng.gen_range(0..peers.len());
-    peers[index]
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let reader_ip_port = ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 8084);
