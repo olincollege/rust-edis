@@ -64,6 +64,8 @@ pub trait RouterHandler: Send + Sync + 'static {
 
     fn handle_query_version_response(&self, res: &QueryVersionResponse);
 
+    fn handle_get_version_response(&self, res: &GetVersionResponse);
+
     fn handle_read_response(&self, res: &ReadResponse);
 
     fn handle_write_response(&self, res: &WriteResponse);
@@ -130,11 +132,10 @@ impl<H: RouterHandler> RouterBuilder<H> {
     pub fn get_router_client(&self) -> RouterClient<H> {
         RouterClient {
             handler: self.handler.clone(),
-            write_sockets: self.write_sockets.clone()
+            write_sockets: self.write_sockets.clone(),
         }
     }
 
-    
     /// Function for queueing outbound responses
     async fn queue_response<M: MessagePayload>(
         write_sockets: Arc<HashMap<String, tokio::net::tcp::OwnedWriteHalf>>,
@@ -370,7 +371,8 @@ impl<H: RouterHandler> RouterBuilder<H> {
 
     /// Makes the router start listening for inbound requests
     pub async fn listen(&self) -> Result<()> {
-        let listener = TcpListener::bind(self.bind_addr.as_deref().unwrap_or("127.0.0.1:0")).await?;
+        let listener =
+            TcpListener::bind(self.bind_addr.as_deref().unwrap_or("127.0.0.1:0")).await?;
         println!("listening on {}", listener.local_addr()?);
 
         loop {
