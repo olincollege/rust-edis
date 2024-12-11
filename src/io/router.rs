@@ -46,8 +46,6 @@ pub trait RouterHandler: Send + Sync + 'static {
 
     fn handle_query_version_request(&self, req: &QueryVersionRequest) -> QueryVersionResponse;
 
-    fn handle_get_version_request(&self, req: &GetVersionRequest) -> GetVersionResponse;
-
     fn handle_read_request(&self, req: &ReadRequest) -> ReadResponse;
 
     fn handle_write_request(&self, req: &WriteRequest) -> WriteResponse;
@@ -56,6 +54,8 @@ pub trait RouterHandler: Send + Sync + 'static {
         &self,
         req: &GetSharedPeersRequest,
     ) -> GetSharedPeersResponse;
+
+    fn handle_get_version_request(&self, req: &GetVersionRequest) -> GetVersionResponse;
 
     /// Callbacks for handling responses to outbound requests
     fn handle_announce_shard_response(&self, res: &AnnounceShardResponse);
@@ -71,6 +71,8 @@ pub trait RouterHandler: Send + Sync + 'static {
     fn handle_write_response(&self, res: &WriteResponse);
 
     fn handle_get_shared_peers_response(&self, res: &GetSharedPeersResponse);
+
+    fn handle_get_version_response(&self, res: &GetVersionResponse);
 }
 
 pub struct RouterBuilder<H: RouterHandler> {
@@ -95,12 +97,13 @@ pub struct RouterClient<H: RouterHandler> {
 impl<H: RouterHandler> RouterClient<H> {
     /// Function for queueing outbound requests
     pub async fn queue_request<M: MessagePayload>(&self, req: M, peer: String) -> Result<()> {
-        RouterBuilder::create_write_socket_if_needed(
+        Self::create_write_socket_if_needed(
             self.write_sockets.clone(),
             self.handler.clone(),
             peer.clone(),
         )
         .await?;
+        RouterBuilder::create_write_socket_if_needed(self.write_sockets.clone(), self.handler.clone(), peer.clone()).await?;
         let mut write_socket = self.write_sockets.get_async(&peer).await.unwrap();
         write_message(
             &mut write_socket,
@@ -292,12 +295,12 @@ impl<H: RouterHandler> RouterBuilder<H> {
                             let req = message
                                 .as_ref()
                                 .as_any()
-                                .downcast_ref::<QueryVersionRequest>()
+                                .downcast_ref::<GetVersionRequest>()
                                 .unwrap();
-                            Self::queue_response::<QueryVersionResponse>(
+                            Self::queue_response::<GetVersionResponse>(
                                 write_sockets.clone(),
                                 handler.clone(),
-                                handler.handle_query_version_request(req),
+                                handler.handle_get_version_request(req),
                                 peer,
                             )
                             .await?;
@@ -349,9 +352,9 @@ impl<H: RouterHandler> RouterBuilder<H> {
                         let res = message
                             .as_ref()
                             .as_any()
-                            .downcast_ref::<QueryVersionResponse>()
+                            .downcast_ref::<GetVersionResponse>()
                             .unwrap();
-                        handler.handle_query_version_response(res)
+                        handler.handle_get_version_response(res)
                     }
                     MessageType::GetSharedPeers => {
                         let res = message
