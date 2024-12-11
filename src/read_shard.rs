@@ -7,6 +7,7 @@ use messages::responses::write_response::WriteResponse;
 use rand::Rng;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use tokio::time;
 mod io;
 mod messages;
 use crate::messages::{
@@ -25,7 +26,7 @@ use crate::messages::{
 
 static MAIN_INSTANCE_IP_PORT: ([u8; 16], u16) =
     ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 8080);
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ReadShard {
     _reader_ip_port: Arc<Mutex<([u8; 16], u16)>>,
     writer_id: Arc<Mutex<u16>>,
@@ -171,13 +172,13 @@ pub fn socket_addr_to_string(addr: ([u8; 16], u16)) -> String {
 async fn main() -> Result<()> {
     let reader_ip_port = ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 8084);
 
-    let info_router = ReadShard::new(Arc::new(Mutex::new(reader_ip_port)));
-    let info_router_1 = info_router.clone();
-    let info_server = RouterBuilder::new(info_router_1, None);
+    let info_router = Arc::new(ReadShard::new(Arc::new(Mutex::new(reader_ip_port))));
+    let router_clone_1 = Arc::clone(&info_router);
+    let info_server = RouterBuilder::new(Arc::try_unwrap(router_clone_1).unwrap(), None);
 
     let client1 = info_server.get_router_client();
     tokio::spawn(async move {
-        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(3));
+        let mut interval = time::interval(time::Duration::from_secs(3));
         loop {
             interval.tick().await;
 
@@ -187,92 +188,103 @@ async fn main() -> Result<()> {
                 port: reader_ip_port.1,
             };
 
-            let _ = client1
+            if let Err(e) = client1
                 .queue_request::<AnnounceShardRequest>(
                     announce_request,
                     socket_addr_to_string(MAIN_INSTANCE_IP_PORT),
                 )
-                .await;
+                .await
+            {
+                eprintln!("Failed to send AnnounceShardRequest: {:?}", e);
+            }
         }
     });
 
-    let info_router_2 = info_router.clone();
+    let router_clone_2 = Arc::clone(&info_router);
     let client2 = info_server.get_router_client();
-    tokio::spawn(async move {
-        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(3));
-        loop {
-            interval.tick().await;
+    tokio::spawn({
+        async move {
+            let mut interval = time::interval(time::Duration::from_secs(3));
+            loop {
+                interval.tick().await;
 
-            let get_peers_request = GetSharedPeersRequest {
-                writer_number: info_router_2.writer_id.lock().unwrap().clone(),
-            };
-            let _ = client2
-                .queue_request::<GetSharedPeersRequest>(
-                    get_peers_request,
-                    socket_addr_to_string(MAIN_INSTANCE_IP_PORT),
-                )
-                .await;
+                let get_peers_request = GetSharedPeersRequest {
+                    writer_number: router_clone_2.writer_id.lock().unwrap().clone(),
+                };
+
+                if let Err(e) = client2
+                    .queue_request::<GetSharedPeersRequest>(
+                        get_peers_request,
+                        socket_addr_to_string(MAIN_INSTANCE_IP_PORT),
+                    )
+                    .await
+                {
+                    eprintln!("Failed to send GetSharedPeersRequest: {:?}", e);
+                }
+            }
         }
     });
 
     let client3 = info_server.get_router_client();
     let client4 = info_server.get_router_client();
+    let router_clone_3 = Arc::clone(&info_router);
+    tokio::spawn({
+        async move {
+            let mut interval = time::interval(time::Duration::from_secs(3));
+            loop {
+                interval.tick().await;
 
-    let info_router_3 = info_router.clone();
-    tokio::spawn(async move {
-        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(3));
-        loop {
-            interval.tick().await;
-
-            let peer_ip_port = {
-                let peers = info_router_3.peers.lock().unwrap();
-                if peers.is_empty() {
-                    eprintln!("No peers available for query.");
-                    continue;
-                }
-                let mut rng = rand::thread_rng();
-                let index = rng.gen_range(0..peers.len());
-                peers[index]
-            };
-
-            let query_version_request = QueryVersionRequest {};
-            if let Err(e) = client3
-                .queue_request::<QueryVersionRequest>(
-                    query_version_request,
-                    socket_addr_to_string(peer_ip_port),
-                )
-                .await
-            {
-                eprintln!("Failed to send QueryVersionRequest: {:?}", e);
-            }
-
-            let (current_version, requested_version) = {
-                let curr_ver = info_router_3.current_version.lock().unwrap().clone();
-                let req_ver = info_router_3.requested_version.lock().unwrap().clone();
-                (curr_ver, req_ver)
-            };
-
-            if requested_version > current_version {
-                let get_version_request = GetVersionRequest {
-                    version: current_version + 1,
+                let peer_ip_port = {
+                    let peers = router_clone_3.peers.lock().unwrap();
+                    if peers.is_empty() {
+                        eprintln!("No peers available for query.");
+                        continue;
+                    }
+                    let mut rng = rand::thread_rng();
+                    let index = rng.gen_range(0..peers.len());
+                    peers[index]
                 };
 
-                if let Err(e) = client4
-                    .queue_request::<GetVersionRequest>(
-                        get_version_request,
+                let query_version_request = QueryVersionRequest {};
+                if let Err(e) = client3
+                    .queue_request::<QueryVersionRequest>(
+                        query_version_request,
                         socket_addr_to_string(peer_ip_port),
                     )
                     .await
                 {
-                    eprintln!("Failed to send GetVersionRequest: {:?}", e);
+                    eprintln!("Failed to send QueryVersionRequest: {:?}", e);
+                }
+
+                let (current_version, requested_version) = {
+                    let curr_ver = router_clone_3.current_version.lock().unwrap().clone();
+                    let req_ver = router_clone_3.requested_version.lock().unwrap().clone();
+                    (curr_ver, req_ver)
+                };
+
+                if requested_version > current_version {
+                    let get_version_request = GetVersionRequest {
+                        version: current_version + 1,
+                    };
+
+                    if let Err(e) = client4
+                        .queue_request::<GetVersionRequest>(
+                            get_version_request,
+                            socket_addr_to_string(peer_ip_port),
+                        )
+                        .await
+                    {
+                        eprintln!("Failed to send GetVersionRequest: {:?}", e);
+                    }
                 }
             }
         }
     });
 
     tokio::spawn(async move {
-        info_server.listen().await.unwrap();
-        Ok(())
+        if let Err(e) = info_server.listen().await {
+            eprintln!("Server failed: {:?}", e);
+        }
     });
 
     Ok(())
