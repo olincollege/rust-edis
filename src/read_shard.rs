@@ -30,7 +30,6 @@ static MAIN_INSTANCE_IP_PORT: ([u8; 16], u16) =
 pub struct ReadShard {
     _reader_ip_port: Arc<Mutex<([u8; 16], u16)>>,
     writer_id: Arc<Mutex<u16>>,
-    writer_ip_port: Arc<Mutex<([u8; 16], u16)>>,
     peers: Arc<Mutex<Vec<([u8; 16], u16)>>>,
     requested_version: Arc<Mutex<u64>>,
     current_version: Arc<Mutex<u64>>,
@@ -66,8 +65,6 @@ impl RouterHandler for ReadShard {
     fn handle_get_shared_peers_response(&self, res: &GetSharedPeersResponse) {
         let mut peers = self.peers.lock().unwrap();
         *peers = res.peer_ips.clone();
-        let mut writer_ip_port = self.writer_ip_port.lock().unwrap();
-        *writer_ip_port = res.peer_ips[0];
     }
 
     fn handle_query_version_response(&self, res: &QueryVersionResponse) {
@@ -146,7 +143,6 @@ impl ReadShard {
         ReadShard {
             _reader_ip_port: reader_ip_port,
             writer_id: Arc::new(Mutex::new(0)),
-            writer_ip_port: Arc::new(Mutex::new(([0; 16], 0))),
             peers: Arc::new(Mutex::new(Vec::new())),
             requested_version: Arc::new(Mutex::new(0)),
             current_version: Arc::new(Mutex::new(0)),
