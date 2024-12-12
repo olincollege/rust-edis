@@ -95,12 +95,6 @@ pub struct RouterClient<H: RouterHandler> {
 impl<H: RouterHandler> RouterClient<H> {
     /// Function for queueing outbound requests
     pub async fn queue_request<M: MessagePayload>(&self, req: M, peer: String) -> Result<()> {
-        Self::create_write_socket_if_needed(
-            self.write_sockets.clone(),
-            self.handler.clone(),
-            peer.clone(),
-        )
-        .await?;
         RouterBuilder::create_write_socket_if_needed(
             self.write_sockets.clone(),
             self.handler.clone(),
