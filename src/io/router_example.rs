@@ -37,13 +37,7 @@ impl RouterHandler for ExampleRouterHandler {
         unimplemented!()
     }
 
-    fn handle_read_request(&self, req: &ReadRequest) -> ReadResponse {
-        ReadResponse {
-            value: vec![1, 2, 3, 4],
-            key: b"testkey".to_vec(),
-            error: 0,
-        }
-    }
+    fn handle_read_request(&self, req: &ReadRequest) -> ReadResponse {ReadResponse {value: vec![1, 2, 3, 4],key: b"testkey".to_vec(),error: 0,}}
 
     fn handle_write_request(&self, req: &WriteRequest) -> WriteResponse {
         unimplemented!()
