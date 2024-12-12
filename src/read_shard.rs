@@ -113,12 +113,12 @@ impl RouterHandler for ReadShard {
     }
 
     fn handle_get_version_request(&self, req: &GetVersionRequest) -> GetVersionResponse {
-        let res = *self.history.lock().unwrap();
+        let res = self.history.lock().unwrap();
         if req.version <= *self.requested_version.lock().unwrap() {
             GetVersionResponse {
                 error: 0,
-                key: res[req.version as usize].0,
-                value: res[req.version as usize].1,
+                key: (res[req.version as usize].0).as_bytes().to_vec(),
+                value: (res[req.version as usize].1).as_bytes().to_vec(),
                 version: req.version,
             }
         } else {
@@ -307,11 +307,27 @@ async fn main() -> Result<()> {
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_read_shard() {
+    #[test]
+    fn test_handle_read_request_success() {
         let read_shard = ReadShard::new(Arc::new(Mutex::new((
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             8084,
         ))));
+
+        // Populate the data
+        read_shard
+            .data
+            .lock()
+            .unwrap()
+            .insert("key1".to_string(), "value1".to_string());
+
+        let read_request = ReadRequest {
+            key: "key1".to_string().into_bytes(),
+        };
+
+        let response = read_shard.handle_read_request(&read_request);
+
+        assert_eq!(response.error, 0);
+        assert_eq!(response.value, "value1".to_string().into_bytes());
     }
 }
