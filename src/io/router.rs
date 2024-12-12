@@ -71,8 +71,6 @@ pub trait RouterHandler: Send + Sync + 'static {
     fn handle_write_response(&self, res: &WriteResponse);
 
     fn handle_get_shared_peers_response(&self, res: &GetSharedPeersResponse);
-
-    fn handle_get_version_response(&self, res: &GetVersionResponse);
 }
 
 pub struct RouterBuilder<H: RouterHandler> {
@@ -103,7 +101,12 @@ impl<H: RouterHandler> RouterClient<H> {
             peer.clone(),
         )
         .await?;
-        RouterBuilder::create_write_socket_if_needed(self.write_sockets.clone(), self.handler.clone(), peer.clone()).await?;
+        RouterBuilder::create_write_socket_if_needed(
+            self.write_sockets.clone(),
+            self.handler.clone(),
+            peer.clone(),
+        )
+        .await?;
         let mut write_socket = self.write_sockets.get_async(&peer).await.unwrap();
         write_message(
             &mut write_socket,

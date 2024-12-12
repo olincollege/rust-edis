@@ -107,11 +107,28 @@ impl RouterHandler for ReadShard {
     }
 
     fn handle_query_version_request(&self, _req: &QueryVersionRequest) -> QueryVersionResponse {
-        unimplemented!()
+        QueryVersionResponse {
+            version: *self.current_version.lock().unwrap(),
+        }
     }
 
-    fn handle_get_version_request(&self, _req: &GetVersionRequest) -> GetVersionResponse {
-        unimplemented!()
+    fn handle_get_version_request(&self, req: &GetVersionRequest) -> GetVersionResponse {
+        let res = *self.history.lock().unwrap();
+        if req.version <= *self.requested_version.lock().unwrap() {
+            GetVersionResponse {
+                error: 0,
+                key: res[req.version as usize].0,
+                value: res[req.version as usize].1,
+                version: req.version,
+            }
+        } else {
+            GetVersionResponse {
+                error: 1,
+                key: Vec::new(),
+                value: Vec::new(),
+                version: req.version,
+            }
+        }
     }
 
     fn handle_write_request(&self, _req: &WriteRequest) -> WriteResponse {
@@ -284,4 +301,17 @@ async fn main() -> Result<()> {
     });
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_read_shard() {
+        let read_shard = ReadShard::new(Arc::new(Mutex::new((
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            8084,
+        ))));
+    }
 }
