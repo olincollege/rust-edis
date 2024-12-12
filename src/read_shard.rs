@@ -114,11 +114,11 @@ impl RouterHandler for ReadShard {
 
     fn handle_get_version_request(&self, req: &GetVersionRequest) -> GetVersionResponse {
         let res = self.history.lock().unwrap();
-        if req.version <= *self.requested_version.lock().unwrap() {
+        if req.version <= *self.current_version.lock().unwrap() {
             GetVersionResponse {
                 error: 0,
-                key: (res[req.version as usize].0).as_bytes().to_vec(),
-                value: (res[req.version as usize].1).as_bytes().to_vec(),
+                key: (res[req.version as usize - 1].0).as_bytes().to_vec(),
+                value: (res[req.version as usize - 1].1).as_bytes().to_vec(),
                 version: req.version,
             }
         } else {
@@ -308,13 +308,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_handle_read_request_success() {
+    fn test_handle_read_request() {
         let read_shard = ReadShard::new(Arc::new(Mutex::new((
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             8084,
         ))));
 
-        // Populate the data
         read_shard
             .data
             .lock()
@@ -329,5 +328,119 @@ mod tests {
 
         assert_eq!(response.error, 0);
         assert_eq!(response.value, "value1".to_string().into_bytes());
+    }
+
+    #[test]
+    fn test_handle_announce_shard_response() {
+        let read_shard = ReadShard::new(Arc::new(Mutex::new((
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            8084,
+        ))));
+
+        let announce_shard_response = AnnounceShardResponse { writer_number: 1 };
+
+        read_shard.handle_announce_shard_response(&announce_shard_response);
+
+        let writer_id = read_shard.writer_id.lock().unwrap();
+        assert_eq!(*writer_id, 1);
+    }
+
+    #[test]
+    fn test_handle_get_shared_peers_response() {
+        let read_shard = ReadShard::new(Arc::new(Mutex::new((
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            8084,
+        ))));
+
+        let res = GetSharedPeersResponse {
+            peer_ips: vec![([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 8084)],
+        };
+
+        read_shard.handle_get_shared_peers_response(&res);
+
+        let peers = read_shard.peers.lock().unwrap();
+        assert_eq!(
+            *peers,
+            vec![([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 8084)]
+        );
+    }
+
+    #[test]
+    fn test_handle_query_version_response() {
+        let read_shard = ReadShard::new(Arc::new(Mutex::new((
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            8084,
+        ))));
+
+        let res = QueryVersionResponse { version: 1 };
+
+        read_shard.handle_query_version_response(&res);
+
+        let requested_version = read_shard.requested_version.lock().unwrap();
+        assert_eq!(*requested_version, 1);
+    }
+
+    #[test]
+    fn test_handle_get_version_response() {
+        let read_shard = ReadShard::new(Arc::new(Mutex::new((
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            8084,
+        ))));
+
+        let get_version_response = GetVersionResponse {
+            key: b"key".to_vec(),
+            value: b"value".to_vec(),
+            error: 0,
+            version: 1,
+        };
+
+        read_shard.handle_get_version_response(&get_version_response);
+
+        let current_version = read_shard.current_version.lock().unwrap();
+        assert_eq!(*current_version, 1);
+    }
+
+    #[test]
+    fn test_handle_query_version_request() {
+        let read_shard = ReadShard::new(Arc::new(Mutex::new((
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            8084,
+        ))));
+
+        let req = QueryVersionRequest {};
+
+        let res = read_shard.handle_query_version_request(&req);
+
+        assert_eq!(res.version, 0);
+    }
+
+    #[test]
+    fn test_handle_get_version_request() {
+        let read_shard = ReadShard::new(Arc::new(Mutex::new((
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            8084,
+        ))));
+
+        read_shard
+            .data
+            .lock()
+            .unwrap()
+            .insert("key".to_string(), "value".to_string());
+        read_shard
+            .history
+            .lock()
+            .unwrap()
+            .push(("key".to_string(), "value".to_string()));
+
+        *read_shard.current_version.lock().unwrap() = 1;
+
+        let req = GetVersionRequest { version: 1 };
+
+        let res = read_shard.handle_get_version_request(&req);
+
+        assert_eq!(res.error, 0);
+        assert_eq!(res.key, b"key".to_vec());
+        assert_eq!(res.value, b"value".to_vec());
+        assert_eq!(res.version, 1);
     }
 }
