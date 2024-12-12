@@ -19,14 +19,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Deps
-        run: |
-          sudo apt-get install -y make git iverilog yosys gtkwave
-
       - name: Install Rust
         run: |
           rustup update
-
 
       - name: Run Tests
         run: |
