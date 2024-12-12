@@ -6,8 +6,9 @@ use messages::responses::get_client_shard_info_response::GetClientShardInfoRespo
 use messages::responses::write_response::WriteResponse;
 use rand::Rng;
 use std::collections::HashMap;
-use std::net::Ipv6Addr;
+use std::net::{Ipv6Addr, SocketAddrV6};
 use std::sync::{Arc, Mutex};
+use tokio::net::unix::SocketAddr;
 use tokio::time;
 mod io;
 mod messages;
@@ -25,13 +26,13 @@ use crate::messages::{
     },
 };
 
-static MAIN_INSTANCE_IP_PORT: ([u8; 16], u16) =
-    ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 8080);
+static MAIN_INSTANCE_IP_PORT: SocketAddrV6 = SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8080, 0, 0);
+
 #[derive(Clone, Debug)]
 pub struct ReadShard {
-    _reader_ip_port: Arc<Mutex<([u8; 16], u16)>>,
+    _reader_ip_port: Arc<Mutex<SocketAddrV6>>,
     writer_id: Arc<Mutex<u16>>,
-    peers: Arc<Mutex<Vec<([u8; 16], u16)>>>,
+    peers: Arc<Mutex<Vec<SocketAddrV6>>>,
     requested_version: Arc<Mutex<u64>>,
     current_version: Arc<Mutex<u64>>,
     history: Arc<Mutex<Vec<(String, String)>>>,
@@ -65,7 +66,11 @@ impl RouterHandler for ReadShard {
 
     fn handle_get_shared_peers_response(&self, res: &GetSharedPeersResponse) {
         let mut peers = self.peers.lock().unwrap();
-        *peers = res.peer_ips.clone();
+        *peers = res
+            .peer_ips
+            .iter()
+            .map(|x| SocketAddrV6::new(Ipv6Addr::from(x.0), x.1, 0, 0))
+            .collect();
     }
 
     fn handle_query_version_response(&self, res: &QueryVersionResponse) {
@@ -157,9 +162,9 @@ impl RouterHandler for ReadShard {
 }
 
 impl ReadShard {
-    pub fn new(reader_ip_port: Arc<Mutex<([u8; 16], u16)>>) -> ReadShard {
+    pub fn new(reader_ip_port: SocketAddrV6) -> ReadShard {
         ReadShard {
-            _reader_ip_port: reader_ip_port,
+            _reader_ip_port: Arc::new(Mutex::new(reader_ip_port)),
             writer_id: Arc::new(Mutex::new(0)),
             peers: Arc::new(Mutex::new(Vec::new())),
             requested_version: Arc::new(Mutex::new(0)),
@@ -170,16 +175,11 @@ impl ReadShard {
     }
 }
 
-pub fn socket_addr_to_string(addr: ([u8; 16], u16)) -> String {
-    let ip = Ipv6Addr::from(addr.0);
-    format!("{}:{}", ip, addr.1)
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
-    let reader_ip_port = ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 8084);
+    let reader_ip_port = SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8084, 0, 0);
 
-    let info_router = Arc::new(ReadShard::new(Arc::new(Mutex::new(reader_ip_port))));
+    let info_router = Arc::new(ReadShard::new(reader_ip_port));
     let router_clone_1 = Arc::clone(&info_router);
     let info_server = RouterBuilder::new(Arc::try_unwrap(router_clone_1).unwrap(), None);
 
@@ -212,15 +212,12 @@ async fn main() -> Result<()> {
             let announce_request = AnnounceShardRequest {
                 shard_type: 1,
                 message_type: 1,
-                ip: reader_ip_port.0,
-                port: reader_ip_port.1,
+                ip: reader_ip_port.ip().to_bits(),
+                port: reader_ip_port.port(),
             };
 
             if let Err(e) = client1
-                .queue_request::<AnnounceShardRequest>(
-                    announce_request,
-                    socket_addr_to_string(MAIN_INSTANCE_IP_PORT),
-                )
+                .queue_request::<AnnounceShardRequest>(announce_request, MAIN_INSTANCE_IP_PORT)
                 .await
             {
                 eprintln!("Failed to send AnnounceShardRequest: {:?}", e);
@@ -243,7 +240,7 @@ async fn main() -> Result<()> {
                 if let Err(e) = client2
                     .queue_request::<GetSharedPeersRequest>(
                         get_peers_request,
-                        socket_addr_to_string(MAIN_INSTANCE_IP_PORT),
+                        MAIN_INSTANCE_IP_PORT,
                     )
                     .await
                 {
@@ -275,10 +272,7 @@ async fn main() -> Result<()> {
 
                 let query_version_request = QueryVersionRequest {};
                 if let Err(e) = client3
-                    .queue_request::<QueryVersionRequest>(
-                        query_version_request,
-                        socket_addr_to_string(peer_ip_port),
-                    )
+                    .queue_request::<QueryVersionRequest>(query_version_request, peer_ip_port)
                     .await
                 {
                     eprintln!("Failed to send QueryVersionRequest: {:?}", e);
@@ -296,10 +290,7 @@ async fn main() -> Result<()> {
                     };
 
                     if let Err(e) = client4
-                        .queue_request::<GetVersionRequest>(
-                            get_version_request,
-                            socket_addr_to_string(peer_ip_port),
-                        )
+                        .queue_request::<GetVersionRequest>(get_version_request, peer_ip_port)
                         .await
                     {
                         eprintln!("Failed to send GetVersionRequest: {:?}", e);
@@ -324,10 +315,7 @@ mod tests {
 
     #[test]
     fn test_handle_read_request() {
-        let read_shard = ReadShard::new(Arc::new(Mutex::new((
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            8084,
-        ))));
+        let read_shard = ReadShard::new(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8084, 0, 0));
 
         read_shard
             .data
@@ -347,10 +335,7 @@ mod tests {
 
     #[test]
     fn test_handle_announce_shard_response() {
-        let read_shard = ReadShard::new(Arc::new(Mutex::new((
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            8084,
-        ))));
+        let read_shard = ReadShard::new(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8084, 0, 0));
 
         let announce_shard_response = AnnounceShardResponse { writer_number: 1 };
 
@@ -362,10 +347,7 @@ mod tests {
 
     #[test]
     fn test_handle_get_shared_peers_response() {
-        let read_shard = ReadShard::new(Arc::new(Mutex::new((
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            8084,
-        ))));
+        let read_shard = ReadShard::new(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8084, 0, 0));
 
         let res = GetSharedPeersResponse {
             peer_ips: vec![([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 8084)],
@@ -376,16 +358,18 @@ mod tests {
         let peers = read_shard.peers.lock().unwrap();
         assert_eq!(
             *peers,
-            vec![([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 8084)]
+            vec![SocketAddrV6::new(
+                Ipv6Addr::from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+                8084,
+                0,
+                0
+            )]
         );
     }
 
     #[test]
     fn test_handle_query_version_response() {
-        let read_shard = ReadShard::new(Arc::new(Mutex::new((
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            8084,
-        ))));
+        let read_shard = ReadShard::new(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8084, 0, 0));
 
         let res = QueryVersionResponse { version: 1 };
 
@@ -397,10 +381,7 @@ mod tests {
 
     #[test]
     fn test_handle_get_version_response() {
-        let read_shard = ReadShard::new(Arc::new(Mutex::new((
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            8084,
-        ))));
+        let read_shard = ReadShard::new(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8084, 0, 0));
 
         let get_version_response = GetVersionResponse {
             key: b"key".to_vec(),
@@ -417,10 +398,7 @@ mod tests {
 
     #[test]
     fn test_handle_query_version_request() {
-        let read_shard = ReadShard::new(Arc::new(Mutex::new((
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            8084,
-        ))));
+        let read_shard = ReadShard::new(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8084, 0, 0));
 
         let req = QueryVersionRequest {};
 
@@ -431,10 +409,7 @@ mod tests {
 
     #[test]
     fn test_handle_get_version_request() {
-        let read_shard = ReadShard::new(Arc::new(Mutex::new((
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            8084,
-        ))));
+        let read_shard = ReadShard::new(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8084, 0, 0));
 
         read_shard
             .data
