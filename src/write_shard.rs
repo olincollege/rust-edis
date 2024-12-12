@@ -72,6 +72,7 @@ impl RouterHandler for WriteShard {
                 error: GetVersionResponseError::NoError as u8,
                 key: key.clone().into_bytes(),
                 value: value.clone().into_bytes(),
+                version: req.version,
             };
             return response;
         }
@@ -81,6 +82,7 @@ impl RouterHandler for WriteShard {
             error: GetVersionResponseError::KeyNotFound as u8,
             key: Vec::new(),   // No key in the error case
             value: Vec::new(), // No value in the error case
+            version: req.version,
         }
     }
 
