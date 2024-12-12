@@ -22,6 +22,7 @@ use async_recursion::async_recursion;
 use scc::HashMap;
 use std::future::IntoFuture;
 use std::{cell::RefCell, sync::Arc};
+use std::net::{SocketAddrV6};
 use tokio::{
     io::{AsyncReadExt, Interest},
     net::{
@@ -76,9 +77,9 @@ pub trait RouterHandler: Send + Sync + 'static {
 pub struct RouterBuilder<H: RouterHandler> {
     pub handler: Arc<H>,
     /// Map of peer addresses to write sockets
-    pub write_sockets: Arc<HashMap<String, tokio::net::tcp::OwnedWriteHalf>>,
+    pub write_sockets: Arc<HashMap<SocketAddrV6, tokio::net::tcp::OwnedWriteHalf>>,
 
-    pub bind_addr: Option<String>,
+    pub bind_addr: Option<SocketAddrV6>,
 }
 
 /// Owned struct returned from RouterBuilder that allows for
@@ -89,12 +90,12 @@ pub struct RouterClient<H: RouterHandler> {
 
     /// Map of peer addresses to write sockets
     /// ownership is retained on a per-key basis under async lock
-    pub write_sockets: Arc<HashMap<String, tokio::net::tcp::OwnedWriteHalf>>,
+    pub write_sockets: Arc<HashMap<SocketAddrV6, tokio::net::tcp::OwnedWriteHalf>>,
 }
 
 impl<H: RouterHandler> RouterClient<H> {
     /// Function for queueing outbound requests
-    pub async fn queue_request<M: MessagePayload>(&self, req: M, peer: String) -> Result<()> {
+    pub async fn queue_request<M: MessagePayload>(&self, req: M, peer: SocketAddrV6) -> Result<()> {
         RouterBuilder::create_write_socket_if_needed(
             self.write_sockets.clone(),
             self.handler.clone(),
@@ -118,7 +119,7 @@ impl<H: RouterHandler> RouterClient<H> {
 unsafe impl<H: RouterHandler> Send for RouterBuilder<H> {}
 
 impl<H: RouterHandler> RouterBuilder<H> {
-    pub fn new(handler: H, bind_addr: Option<String>) -> Self {
+    pub fn new(handler: H, bind_addr: Option<SocketAddrV6>) -> Self {
         Self {
             handler: Arc::new(handler),
             write_sockets: Arc::new(scc::HashMap::new()),
@@ -160,9 +161,9 @@ impl<H: RouterHandler> RouterBuilder<H> {
     /// https://www.reddit.com/r/rust/comments/kbu6bs/async_recursive_function_in_rust_using_futures/
     #[async_recursion]
     async fn create_write_socket_if_needed(
-        write_sockets: Arc<HashMap<String, tokio::net::tcp::OwnedWriteHalf>>,
+        write_sockets: Arc<HashMap<SocketAddrV6, tokio::net::tcp::OwnedWriteHalf>>,
         handler: Arc<H>,
-        peer: String,
+        peer: SocketAddrV6,
     ) -> Result<()> {
         // check if peer is already connected
         if !write_sockets.contains_async(&peer).await {
@@ -189,7 +190,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
 
     /// Listens for inbound requests on the read half of a socket from a peer
     async fn listen_read_half_socket(
-        write_sockets: Arc<HashMap<String, tokio::net::tcp::OwnedWriteHalf>>,
+        write_sockets: Arc<HashMap<SocketAddrV6, tokio::net::tcp::OwnedWriteHalf>>,
         handler: Arc<H>,
         mut read: OwnedReadHalf,
     ) -> Result<()> {
