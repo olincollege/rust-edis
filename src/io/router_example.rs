@@ -97,7 +97,10 @@ impl RouterHandler for ExampleRouterHandler {
 }
 
 mod test {
-    use std::{net::{Ipv6Addr, SocketAddrV6}, sync::{Arc, RwLock}};
+    use std::{
+        net::{Ipv6Addr, SocketAddrV6},
+        sync::{Arc, RwLock},
+    };
 
     use crate::{
         io::{router::RouterBuilder, router_example::ExampleRouterHandler},

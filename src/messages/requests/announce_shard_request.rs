@@ -40,8 +40,9 @@ impl MessagePayload for AnnounceShardRequest {
         offset += 1;
 
         // Read IP (16 bytes)
-        let ip =
-            u128::from_le_bytes(<[u8; 16]>::try_from(&buffer[offset..offset + 16]).context("failed to get IP bytes")?);
+        let ip = u128::from_le_bytes(
+            <[u8; 16]>::try_from(&buffer[offset..offset + 16]).context("failed to get IP bytes")?,
+        );
         offset += 16;
 
         // Read port (2 bytes, little-endian)

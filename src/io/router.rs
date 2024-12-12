@@ -21,9 +21,9 @@ use anyhow::{anyhow, Ok, Result};
 use async_recursion::async_recursion;
 use scc::HashMap;
 use std::future::IntoFuture;
-use std::{cell::RefCell, sync::Arc};
-use std::net::SocketAddr::{V4,V6};
+use std::net::SocketAddr::{V4, V6};
 use std::net::{Ipv6Addr, SocketAddrV6};
+use std::{cell::RefCell, sync::Arc};
 use tokio::{
     io::{AsyncReadExt, Interest},
     net::{
@@ -367,7 +367,6 @@ impl<H: RouterHandler> RouterBuilder<H> {
                             }
                         },
                     };
-        
                 }
                 V4(_peer) => {
                     println!("ignoring ipv4 peer, please use ipv6")
@@ -378,13 +377,13 @@ impl<H: RouterHandler> RouterBuilder<H> {
 
     /// Makes the router start listening for inbound requests
     pub async fn listen(&self) -> Result<()> {
-        let listener =
-            TcpListener::bind(self.bind_addr.unwrap_or(SocketAddrV6::new(
-                Ipv6Addr::LOCALHOST,
-                0,
-                0,
-                0
-            ))).await?;
+        let listener = TcpListener::bind(self.bind_addr.unwrap_or(SocketAddrV6::new(
+            Ipv6Addr::LOCALHOST,
+            0,
+            0,
+            0,
+        )))
+        .await?;
         println!("listening on {}", listener.local_addr()?);
 
         loop {
@@ -413,7 +412,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
                 V4(_addr) => {
                     println!("ignoring ipv4 connection, please use ipv6");
                 }
-            } 
+            }
         }
     }
 }
