@@ -97,7 +97,7 @@ impl RouterHandler for ExampleRouterHandler {
 }
 
 mod test {
-    use std::sync::{Arc, RwLock};
+    use std::{net::{Ipv6Addr, SocketAddrV6}, sync::{Arc, RwLock}};
 
     use crate::{
         io::{router::RouterBuilder, router_example::ExampleRouterHandler},
@@ -116,13 +116,13 @@ mod test {
             ExampleRouterHandler {
                 debug_out: debug_out1.clone(),
             },
-            Some("127.0.0.1:8080".to_string()),
+            Some(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8080, 0, 0)),
         );
         let router2: RouterBuilder<ExampleRouterHandler> = RouterBuilder::new(
             ExampleRouterHandler {
                 debug_out: debug_out2.clone(),
             },
-            Some("127.0.0.1:8081".to_string()),
+            Some(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8081, 0, 0)),
         );
 
         tokio::spawn(async move {
@@ -139,7 +139,7 @@ mod test {
                     ReadRequest {
                         key: "test".as_bytes().to_vec(),
                     },
-                    "127.0.0.1:8081".to_string(),
+                    SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8081, 0, 0),
                 )
                 .await?;
             tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;

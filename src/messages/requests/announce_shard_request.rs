@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 
 pub struct AnnounceShardRequest {
     pub shard_type: u8,
-    pub ip: [u8; 16],
+    pub ip: u128,
     pub port: u16,
 }
 
@@ -25,7 +25,7 @@ impl MessagePayload for AnnounceShardRequest {
         buffer.push(self.shard_type);
 
         // Add IP (16 bytes)
-        buffer.extend_from_slice(&self.ip);
+        buffer.extend_from_slice(&self.ip.to_le_bytes());
 
         // Add port (2 bytes, little-endian)
         buffer.extend_from_slice(&self.port.to_le_bytes());
@@ -41,7 +41,7 @@ impl MessagePayload for AnnounceShardRequest {
 
         // Read IP (16 bytes)
         let ip =
-            <[u8; 16]>::try_from(&buffer[offset..offset + 16]).context("failed to get IP bytes")?;
+            u128::from_le_bytes(<[u8; 16]>::try_from(&buffer[offset..offset + 16]).context("failed to get IP bytes")?);
         offset += 16;
 
         // Read port (2 bytes, little-endian)
@@ -66,7 +66,7 @@ mod tests {
     fn test_roundtrip_basic() {
         let original = AnnounceShardRequest {
             shard_type: 1,
-            ip: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            ip: 1,
             port: 8080,
         };
         let serialized = original.serialize().unwrap();
@@ -80,7 +80,7 @@ mod tests {
     fn test_roundtrip_random() {
         for _ in 0..1000 {
             let mut rng = rand::thread_rng();
-            let ip: [u8; 16] = rng.gen();
+            let ip: u128 = rng.gen();
             let port: u16 = rng.gen();
             let original = AnnounceShardRequest {
                 shard_type: 1,
