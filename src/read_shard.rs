@@ -1,5 +1,6 @@
 use crate::io::router::{RouterBuilder, RouterHandler};
 use anyhow::{Ok, Result};
+use messages::requests::announce_shard_request::ShardType;
 use messages::requests::get_client_shard_info_request::GetClientShardInfoRequest;
 use messages::requests::write_request::WriteRequest;
 use messages::responses::get_client_shard_info_response::GetClientShardInfoResponse;
@@ -190,7 +191,7 @@ async fn main() -> Result<()> {
             interval.tick().await;
 
             let announce_request = AnnounceShardRequest {
-                shard_type: 1,
+                shard_type: ShardType::ReadShard,
                 ip: reader_ip_port.ip().to_bits(),
                 port: reader_ip_port.port(),
             };

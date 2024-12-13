@@ -147,7 +147,7 @@ impl RouterHandler for InfoRouter {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let info_router = InfoRouter::new();
+    let info_router = InfoRouter::new(4);
     let info_server = RouterBuilder::new(info_router, None);
     tokio::spawn(async move {
         info_server.listen().await?;
