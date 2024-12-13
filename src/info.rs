@@ -25,24 +25,30 @@ use messages::responses::write_response::WriteResponse;
 
 use anyhow::Result;
 use rand::seq::SliceRandom;
+use std::sync::{Arc, Mutex};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
-use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
 struct ReaderWriterBlock {
     writer: Option<(u128, u16)>,
-    readers: Vec<(u128, u16)>
+    readers: Vec<(u128, u16)>,
 }
 
 struct InfoRouter {
-    reader_writers: Arc<Mutex<Vec<ReaderWriterBlock>>>
+    reader_writers: Arc<Mutex<Vec<ReaderWriterBlock>>>,
 }
 
 impl InfoRouter {
     pub fn new(num_writers: u16) -> Self {
         InfoRouter {
-            reader_writers: Arc::new(Mutex::new(vec![ReaderWriterBlock { writer: None, readers: Vec::new() }; num_writers as usize]))
+            reader_writers: Arc::new(Mutex::new(vec![
+                ReaderWriterBlock {
+                    writer: None,
+                    readers: Vec::new()
+                };
+                num_writers as usize
+            ])),
         }
     }
 }
@@ -55,37 +61,40 @@ impl RouterHandler for InfoRouter {
                 let mut reader_writers = self.reader_writers.lock().unwrap();
 
                 // find the writer with the smallest number of readers and attach there
-                let writer_idx = reader_writers.iter().enumerate().min_by(|(_, a), (_, b)| {
-                    a.readers.len().cmp(&b.readers.len())
-                }).unwrap().0;
-                reader_writers[writer_idx].readers.push((req.ip,req.port));
+                let writer_idx = reader_writers
+                    .iter()
+                    .enumerate()
+                    .min_by(|(_, a), (_, b)| a.readers.len().cmp(&b.readers.len()))
+                    .unwrap()
+                    .0;
+                reader_writers[writer_idx].readers.push((req.ip, req.port));
 
                 AnnounceShardResponse {
-                    writer_number: writer_idx as u16
+                    writer_number: writer_idx as u16,
                 }
             }
             ShardType::WriteShard => {
                 let mut reader_writers = self.reader_writers.lock().unwrap();
-                let first_empty_idx = reader_writers.iter().position(|block| block.writer.is_none());
+                let first_empty_idx = reader_writers
+                    .iter()
+                    .position(|block| block.writer.is_none());
                 match first_empty_idx {
                     None => {
                         println!("too many write shards already attached, skipping");
                         // todo: have this support an error code
-                        AnnounceShardResponse {
-                            writer_number: 0
-                        }
-                    } 
+                        AnnounceShardResponse { writer_number: 0 }
+                    }
                     Some(idx) => {
-                        reader_writers[idx].writer = Some((req.ip,req.port));
+                        reader_writers[idx].writer = Some((req.ip, req.port));
                         AnnounceShardResponse {
-                            writer_number: idx as u16
+                            writer_number: idx as u16,
                         }
                     }
                 }
-          }
+            }
         }
     }
-  
+
     fn handle_get_client_shard_info_request(
         &self,
         _req: &GetClientShardInfoRequest,
@@ -109,8 +118,8 @@ impl RouterHandler for InfoRouter {
                             return GetClientShardInfoResponse {
                                 num_write_shards: 0,
                                 read_shard_info: Vec::new(),
-                                write_shard_info: Vec::new()
-                            }
+                                write_shard_info: Vec::new(),
+                            };
                         }
                     }
                 }
@@ -119,15 +128,15 @@ impl RouterHandler for InfoRouter {
                     return GetClientShardInfoResponse {
                         num_write_shards: 0,
                         read_shard_info: Vec::new(),
-                        write_shard_info: Vec::new()
-                    }
+                        write_shard_info: Vec::new(),
+                    };
                 }
             }
         }
         GetClientShardInfoResponse {
             num_write_shards: writers.len() as u16,
             write_shard_info: writers,
-            read_shard_info: readers
+            read_shard_info: readers,
         }
     }
 
@@ -136,7 +145,7 @@ impl RouterHandler for InfoRouter {
         req: &GetSharedPeersRequest,
     ) -> GetSharedPeersResponse {
         let mut reader_writers = self.reader_writers.lock().unwrap();
-        
+
         let mut peer_ips: Vec<(u128, u16)> = Vec::new();
 
         if (req.writer_number as usize) < reader_writers.len() {
@@ -152,11 +161,9 @@ impl RouterHandler for InfoRouter {
             }
         }
 
-        GetSharedPeersResponse {
-            peer_ips: peer_ips
-        }
+        GetSharedPeersResponse { peer_ips: peer_ips }
     }
-  
+
     // Unused requests
     fn handle_query_version_request(&self, req: &QueryVersionRequest) -> QueryVersionResponse {
         unimplemented!()
@@ -170,7 +177,7 @@ impl RouterHandler for InfoRouter {
     fn handle_get_version_request(&self, req: &GetVersionRequest) -> GetVersionResponse {
         unimplemented!();
     }
-    
+
     // Unused responses
     fn handle_announce_shard_response(&self, res: &AnnounceShardResponse) {
         unimplemented!()

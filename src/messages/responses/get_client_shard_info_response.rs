@@ -47,10 +47,12 @@ impl MessagePayload for GetClientShardInfoResponse {
         for i in 0..(num_write_shards as usize) {
             let write_shard_offset: usize = 2;
 
-            let ip_write = u128::from_le_bytes(buffer
-                .get((write_shard_offset + i * 18)..write_shard_offset + i * 18 + 16)
-                .context("failed to get write shard ip")?
-                .try_into()?);
+            let ip_write = u128::from_le_bytes(
+                buffer
+                    .get((write_shard_offset + i * 18)..write_shard_offset + i * 18 + 16)
+                    .context("failed to get write shard ip")?
+                    .try_into()?,
+            );
             let port_write = u16::from_le_bytes(
                 buffer
                     .get(write_shard_offset + i * 18 + 16..write_shard_offset + i * 18 + 18)
@@ -59,10 +61,12 @@ impl MessagePayload for GetClientShardInfoResponse {
             );
 
             let read_shard_offset: usize = write_shard_offset + 18 * num_write_shards as usize;
-            let ip_read = u128::from_le_bytes(buffer
-                .get(read_shard_offset + i * 18..read_shard_offset + i * 18 + 16)
-                .context("failed to get read shard ip")?
-                .try_into()?);
+            let ip_read = u128::from_le_bytes(
+                buffer
+                    .get(read_shard_offset + i * 18..read_shard_offset + i * 18 + 16)
+                    .context("failed to get read shard ip")?
+                    .try_into()?,
+            );
             let port_read = u16::from_le_bytes(
                 buffer
                     .get(read_shard_offset + i * 18 + 16..read_shard_offset + i * 18 + 18)
@@ -90,26 +94,8 @@ mod tests {
     fn test_roundtrip_basic() {
         let original = GetClientShardInfoResponse {
             num_write_shards: 2,
-            write_shard_info: vec![
-                (
-                    12121,
-                    8080,
-                ),
-                (
-                    321093201,
-                    8081,
-                ),
-            ],
-            read_shard_info: vec![
-                (
-                    321098,
-                    9080,
-                ),
-                (
-                    909032190,
-                    9081,
-                ),
-            ],
+            write_shard_info: vec![(12121, 8080), (321093201, 8081)],
+            read_shard_info: vec![(321098, 9080), (909032190, 9081)],
         };
         let serialized = original.serialize().unwrap();
         let deserialized = GetClientShardInfoResponse::deserialize(&serialized).unwrap();

@@ -61,21 +61,12 @@ mod tests {
     #[test]
     fn test_roundtrip_basic() {
         let original = GetSharedPeersResponse {
-            peer_ips: vec![
-                (1, 8080),
-                (1, 8081),
-            ],
+            peer_ips: vec![(1, 8080), (1, 8081)],
         };
         let serialized = original.serialize().unwrap();
         let deserialized = GetSharedPeersResponse::deserialize(&serialized).unwrap();
         assert_eq!(original.peer_ips, deserialized.peer_ips);
-        assert_eq!(
-            original.peer_ips,
-            vec![
-                (1, 8080,),
-                (1, 8081,),
-            ]
-        )
+        assert_eq!(original.peer_ips, vec![(1, 8080,), (1, 8081,),])
     }
 
     #[test]
