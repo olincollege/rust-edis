@@ -6,8 +6,8 @@ use anyhow::{Context, Result};
 /// | num_write_shards | write_shard_info | read_shard_info |
 pub struct GetClientShardInfoResponse {
     pub num_write_shards: u16,
-    pub write_shard_info: Vec<([u8; 16], u16)>,
-    pub read_shard_info: Vec<([u8; 16], u16)>,
+    pub write_shard_info: Vec<(u128, u16)>,
+    pub read_shard_info: Vec<(u128, u16)>,
 }
 
 impl MessagePayload for GetClientShardInfoResponse {
@@ -23,11 +23,11 @@ impl MessagePayload for GetClientShardInfoResponse {
         let mut buffer = Vec::new();
         buffer.extend_from_slice(&self.num_write_shards.to_le_bytes());
         for (ip, port) in &self.write_shard_info {
-            buffer.extend_from_slice(ip);
+            buffer.extend_from_slice(&ip.to_le_bytes());
             buffer.extend_from_slice(&port.to_le_bytes());
         }
         for (ip, port) in &self.read_shard_info {
-            buffer.extend_from_slice(ip);
+            buffer.extend_from_slice(&ip.to_le_bytes());
             buffer.extend_from_slice(&port.to_le_bytes());
         }
         Ok(buffer)
@@ -47,10 +47,12 @@ impl MessagePayload for GetClientShardInfoResponse {
         for i in 0..(num_write_shards as usize) {
             let write_shard_offset: usize = 2;
 
-            let ip_write = buffer
-                .get((write_shard_offset + i * 18)..write_shard_offset + i * 18 + 16)
-                .context("failed to get write shard ip")?
-                .try_into()?;
+            let ip_write = u128::from_le_bytes(
+                buffer
+                    .get((write_shard_offset + i * 18)..write_shard_offset + i * 18 + 16)
+                    .context("failed to get write shard ip")?
+                    .try_into()?,
+            );
             let port_write = u16::from_le_bytes(
                 buffer
                     .get(write_shard_offset + i * 18 + 16..write_shard_offset + i * 18 + 18)
@@ -59,10 +61,12 @@ impl MessagePayload for GetClientShardInfoResponse {
             );
 
             let read_shard_offset: usize = write_shard_offset + 18 * num_write_shards as usize;
-            let ip_read = buffer
-                .get(read_shard_offset + i * 18..read_shard_offset + i * 18 + 16)
-                .context("failed to get read shard ip")?
-                .try_into()?;
+            let ip_read = u128::from_le_bytes(
+                buffer
+                    .get(read_shard_offset + i * 18..read_shard_offset + i * 18 + 16)
+                    .context("failed to get read shard ip")?
+                    .try_into()?,
+            );
             let port_read = u16::from_le_bytes(
                 buffer
                     .get(read_shard_offset + i * 18 + 16..read_shard_offset + i * 18 + 18)
@@ -90,26 +94,8 @@ mod tests {
     fn test_roundtrip_basic() {
         let original = GetClientShardInfoResponse {
             num_write_shards: 2,
-            write_shard_info: vec![
-                (
-                    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-                    8080,
-                ),
-                (
-                    [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
-                    8081,
-                ),
-            ],
-            read_shard_info: vec![
-                (
-                    [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-                    9080,
-                ),
-                (
-                    [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
-                    9081,
-                ),
-            ],
+            write_shard_info: vec![(12121, 8080), (321093201, 8081)],
+            read_shard_info: vec![(321098, 9080), (909032190, 9081)],
         };
         let serialized = original.serialize().unwrap();
         let deserialized = GetClientShardInfoResponse::deserialize(&serialized).unwrap();
@@ -128,11 +114,11 @@ mod tests {
             let mut read_shard_info = Vec::new();
 
             for _ in 0..num_shards {
-                let write_ip: [u8; 16] = rng.gen();
+                let write_ip: u128 = rng.gen();
                 let write_port = rng.gen();
                 write_shard_info.push((write_ip, write_port));
 
-                let read_ip: [u8; 16] = rng.gen();
+                let read_ip: u128 = rng.gen();
                 let read_port = rng.gen();
                 read_shard_info.push((read_ip, read_port));
             }

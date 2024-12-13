@@ -5,7 +5,7 @@ use std::mem::uninitialized;
 
 use crate::io::router::{RouterBuilder, RouterHandler};
 
-use messages::requests::announce_shard_request::AnnounceShardRequest;
+use messages::requests::announce_shard_request::{AnnounceShardRequest, ShardType};
 use messages::requests::get_client_shard_info_request::GetClientShardInfoRequest;
 use messages::requests::get_shared_peers_request::GetSharedPeersRequest;
 use messages::requests::get_version_request::GetVersionRequest;
@@ -24,39 +24,147 @@ use messages::responses::read_response::ReadResponse;
 use messages::responses::write_response::WriteResponse;
 
 use anyhow::Result;
+use rand::seq::SliceRandom;
+use std::sync::{Arc, Mutex};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 
-struct InfoRouter {}
+#[derive(Clone)]
+struct ReaderWriterBlock {
+    writer: Option<(u128, u16)>,
+    readers: Vec<(u128, u16)>,
+}
+
+struct InfoRouter {
+    reader_writers: Arc<Mutex<Vec<ReaderWriterBlock>>>,
+}
 
 impl InfoRouter {
-    pub fn new() -> Self {
-        InfoRouter {}
+    pub fn new(num_writers: u16) -> Self {
+        InfoRouter {
+            reader_writers: Arc::new(Mutex::new(vec![
+                ReaderWriterBlock {
+                    writer: None,
+                    readers: Vec::new()
+                };
+                num_writers as usize
+            ])),
+        }
     }
 }
 
 impl RouterHandler for InfoRouter {
     /// Callback for handling new requests
     fn handle_announce_shard_request(&self, req: &AnnounceShardRequest) -> AnnounceShardResponse {
-        unimplemented!()
-    }
-    fn handle_announce_shard_response(&self, res: &AnnounceShardResponse) {
-        unimplemented!()
+        match req.shard_type {
+            ShardType::ReadShard => {
+                let mut reader_writers = self.reader_writers.lock().unwrap();
+
+                // find the writer with the smallest number of readers and attach there
+                let writer_idx = reader_writers
+                    .iter()
+                    .enumerate()
+                    .min_by(|(_, a), (_, b)| a.readers.len().cmp(&b.readers.len()))
+                    .unwrap()
+                    .0;
+                reader_writers[writer_idx].readers.push((req.ip, req.port));
+
+                AnnounceShardResponse {
+                    writer_number: writer_idx as u16,
+                }
+            }
+            ShardType::WriteShard => {
+                let mut reader_writers = self.reader_writers.lock().unwrap();
+                let first_empty_idx = reader_writers
+                    .iter()
+                    .position(|block| block.writer.is_none());
+                match first_empty_idx {
+                    None => {
+                        println!("too many write shards already attached, skipping");
+                        // todo: have this support an error code
+                        AnnounceShardResponse { writer_number: 0 }
+                    }
+                    Some(idx) => {
+                        reader_writers[idx].writer = Some((req.ip, req.port));
+                        AnnounceShardResponse {
+                            writer_number: idx as u16,
+                        }
+                    }
+                }
+            }
+        }
     }
 
     fn handle_get_client_shard_info_request(
         &self,
-        req: &GetClientShardInfoRequest,
+        _req: &GetClientShardInfoRequest,
     ) -> GetClientShardInfoResponse {
-        unimplemented!()
+        let reader_writers = self.reader_writers.lock().unwrap();
+
+        let mut writers: Vec<(u128, u16)> = Vec::new();
+        let mut readers: Vec<(u128, u16)> = Vec::new();
+
+        for writer_block in reader_writers.iter() {
+            match writer_block.writer {
+                Some(writer) => {
+                    writers.push(writer);
+                    let reader = writer_block.readers.choose(&mut rand::thread_rng());
+                    match reader {
+                        Some(reader) => {
+                            readers.push(reader.clone());
+                        }
+                        None => {
+                            // error
+                            return GetClientShardInfoResponse {
+                                num_write_shards: 0,
+                                read_shard_info: Vec::new(),
+                                write_shard_info: Vec::new(),
+                            };
+                        }
+                    }
+                }
+                None => {
+                    // error
+                    return GetClientShardInfoResponse {
+                        num_write_shards: 0,
+                        read_shard_info: Vec::new(),
+                        write_shard_info: Vec::new(),
+                    };
+                }
+            }
+        }
+        GetClientShardInfoResponse {
+            num_write_shards: writers.len() as u16,
+            write_shard_info: writers,
+            read_shard_info: readers,
+        }
     }
 
-    fn handle_get_version_request(&self, req: &GetVersionRequest) -> GetVersionResponse {
-        unimplemented!();
+    fn handle_get_shared_peers_request(
+        &self,
+        req: &GetSharedPeersRequest,
+    ) -> GetSharedPeersResponse {
+        let mut reader_writers = self.reader_writers.lock().unwrap();
+
+        let mut peer_ips: Vec<(u128, u16)> = Vec::new();
+
+        if (req.writer_number as usize) < reader_writers.len() {
+            let writer_block = &mut reader_writers[req.writer_number as usize];
+            match writer_block.writer {
+                Some(writer) => {
+                    peer_ips.push(writer);
+                    for reader in &writer_block.readers {
+                        peer_ips.push(reader.clone());
+                    }
+                }
+                None => {}
+            }
+        }
+
+        GetSharedPeersResponse { peer_ips: peer_ips }
     }
 
-    /// Info server does not handle requests in relation to the actual key/value state
-    /// we could change this to return an error response in the future
+    // Unused requests
     fn handle_query_version_request(&self, req: &QueryVersionRequest) -> QueryVersionResponse {
         unimplemented!()
     }
@@ -66,34 +174,27 @@ impl RouterHandler for InfoRouter {
     fn handle_write_request(&self, req: &WriteRequest) -> WriteResponse {
         unimplemented!()
     }
-
-    fn handle_get_shared_peers_request(
-        &self,
-        req: &GetSharedPeersRequest,
-    ) -> GetSharedPeersResponse {
-        unimplemented!()
+    fn handle_get_version_request(&self, req: &GetVersionRequest) -> GetVersionResponse {
+        unimplemented!();
     }
 
-    /// Callbacks for handling responses to outbound requests
-
+    // Unused responses
+    fn handle_announce_shard_response(&self, res: &AnnounceShardResponse) {
+        unimplemented!()
+    }
     fn handle_get_client_shard_info_response(&self, res: &GetClientShardInfoResponse) {
         unimplemented!()
     }
-
     fn handle_query_version_response(&self, res: &QueryVersionResponse) {
         unimplemented!()
     }
-
     fn handle_read_response(&self, res: &ReadResponse) {}
-
     fn handle_write_response(&self, res: &WriteResponse) {
         unimplemented!()
     }
-
     fn handle_get_shared_peers_response(&self, res: &GetSharedPeersResponse) {
         unimplemented!()
     }
-
     fn handle_get_version_response(&self, res: &GetVersionResponse) {
         unimplemented!()
     }
@@ -101,7 +202,7 @@ impl RouterHandler for InfoRouter {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let info_router = InfoRouter::new();
+    let info_router = InfoRouter::new(4);
     let info_server = RouterBuilder::new(info_router, None);
     tokio::spawn(async move {
         info_server.listen().await?;

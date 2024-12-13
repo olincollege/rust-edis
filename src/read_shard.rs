@@ -1,5 +1,6 @@
 use crate::io::router::{RouterBuilder, RouterHandler};
 use anyhow::{Ok, Result};
+use messages::requests::announce_shard_request::ShardType;
 use messages::requests::get_client_shard_info_request::GetClientShardInfoRequest;
 use messages::requests::write_request::WriteRequest;
 use messages::responses::get_client_shard_info_response::GetClientShardInfoResponse;
@@ -190,7 +191,7 @@ async fn main() -> Result<()> {
             interval.tick().await;
 
             let announce_request = AnnounceShardRequest {
-                shard_type: 1,
+                shard_type: ShardType::ReadShard,
                 ip: reader_ip_port.ip().to_bits(),
                 port: reader_ip_port.port(),
             };
@@ -329,7 +330,7 @@ mod tests {
         let read_shard = ReadShard::new(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8084, 0, 0));
 
         let res = GetSharedPeersResponse {
-            peer_ips: vec![([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 8084)],
+            peer_ips: vec![(1, 8084)],
         };
 
         read_shard.handle_get_shared_peers_response(&res);
