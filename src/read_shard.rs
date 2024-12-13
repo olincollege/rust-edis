@@ -330,7 +330,7 @@ mod tests {
         let read_shard = ReadShard::new(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8084, 0, 0));
 
         let res = GetSharedPeersResponse {
-            peer_ips: vec![([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 8084)],
+            peer_ips: vec![(1, 8084)],
         };
 
         read_shard.handle_get_shared_peers_response(&res);

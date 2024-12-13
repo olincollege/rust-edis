@@ -89,6 +89,7 @@ impl RouterHandler for InfoRouter {
         &self,
         req: &GetClientShardInfoRequest,
     ) -> GetClientShardInfoResponse {
+        let mut reader_writers = self.reader_writers.lock().unwrap();
         unimplemented!()
     }
 
@@ -96,7 +97,26 @@ impl RouterHandler for InfoRouter {
         &self,
         req: &GetSharedPeersRequest,
     ) -> GetSharedPeersResponse {
-        unimplemented!()
+        let mut reader_writers = self.reader_writers.lock().unwrap();
+        
+        let mut peer_ips: Vec<(u128, u16)> = Vec::new();
+
+        if (req.writer_number as usize) < reader_writers.len() {
+            let writer_block = &mut reader_writers[req.writer_number as usize];
+            match writer_block.writer {
+                Some(writer) => {
+                    peer_ips.push(writer);
+                    for reader in &writer_block.readers {
+                        peer_ips.push(reader.clone());
+                    }
+                }
+                None => {}
+            }
+        }
+
+        GetSharedPeersResponse {
+            peer_ips: peer_ips
+        }
     }
   
     // Unused requests

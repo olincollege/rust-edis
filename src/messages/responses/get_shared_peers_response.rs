@@ -2,7 +2,7 @@ use crate::messages::message::{MessagePayload, MessageType};
 use anyhow::{Context, Result};
 
 pub struct GetSharedPeersResponse {
-    pub peer_ips: Vec<([u8; 16], u16)>,
+    pub peer_ips: Vec<(u128, u16)>,
 }
 
 /// Layout of the GetSharedPeersResponse
@@ -22,7 +22,7 @@ impl MessagePayload for GetSharedPeersResponse {
 
         // Add Peer IPs
         for (ip, port) in &self.peer_ips {
-            buffer.extend_from_slice(ip);
+            buffer.extend_from_slice(&ip.to_le_bytes());
             buffer.extend_from_slice(&port.to_le_bytes());
         }
         Ok(buffer)
@@ -36,6 +36,7 @@ impl MessagePayload for GetSharedPeersResponse {
             // Read IP (16 bytes)
             let ip = <[u8; 16]>::try_from(&buffer[offset..offset + 16])
                 .context("failed to get IP bytes")?;
+            let ip = u128::from_le_bytes(ip);
             offset += 16;
 
             // Read port (2 bytes, little-endian)
@@ -61,8 +62,8 @@ mod tests {
     fn test_roundtrip_basic() {
         let original = GetSharedPeersResponse {
             peer_ips: vec![
-                ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 8080),
-                ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2], 8081),
+                (1, 8080),
+                (1, 8081),
             ],
         };
         let serialized = original.serialize().unwrap();
@@ -71,8 +72,8 @@ mod tests {
         assert_eq!(
             original.peer_ips,
             vec![
-                ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,], 8080,),
-                ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,], 8081,),
+                (1, 8080,),
+                (1, 8081,),
             ]
         )
     }
@@ -81,7 +82,7 @@ mod tests {
     fn test_roundtrip_random() {
         for _ in 0..1000 {
             let mut rng = rand::thread_rng();
-            let ip: [u8; 16] = rng.gen();
+            let ip: u128 = rng.gen();
             let port: u16 = rng.gen();
             let original = GetSharedPeersResponse {
                 peer_ips: vec![(ip, port)],
