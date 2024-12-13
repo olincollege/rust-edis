@@ -219,7 +219,6 @@ mod tests {
     use super::*;
     use std::net::{Ipv6Addr, SocketAddrV6};
 
-
     #[tokio::test]
     async fn test_shard_attachment() {
         let test_router_client = TestRouterClient::new();
@@ -229,58 +228,76 @@ mod tests {
         let read_shards = 4;
 
         let local = SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8080, 0, 0);
-        let info_router = RouterBuilder::new(
-            InfoRouter::new(2),
-            Some(local)
-        );
+        let info_router = RouterBuilder::new(InfoRouter::new(2), Some(local));
 
         tokio::spawn(async move {
             info_router.listen().await.unwrap();
         });
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
-        
         // send a bunch of announcements
         for i in 0..write_shards {
-            test_client.queue_request(AnnounceShardRequest {
-                shard_type: ShardType::WriteShard,
-                ip: i,
-                port: i as u16
-            }, local).await.unwrap();
-            
+            test_client
+                .queue_request(
+                    AnnounceShardRequest {
+                        shard_type: ShardType::WriteShard,
+                        ip: i,
+                        port: i as u16,
+                    },
+                    local,
+                )
+                .await
+                .unwrap();
+
             for j in 0..read_shards {
-                test_client.queue_request(AnnounceShardRequest {
-                    shard_type: ShardType::ReadShard,
-                    ip: j*100,
-                    port: (j*100) as u16
-                }, local).await.unwrap();
+                test_client
+                    .queue_request(
+                        AnnounceShardRequest {
+                            shard_type: ShardType::ReadShard,
+                            ip: j * 100,
+                            port: (j * 100) as u16,
+                        },
+                        local,
+                    )
+                    .await
+                    .unwrap();
             }
         }
 
         // test peer lists
         for i in 0..write_shards {
-            test_client.queue_request(GetSharedPeersRequest {
-                writer_number: i as u16 
-            }, local).await.unwrap();
+            test_client
+                .queue_request(
+                    GetSharedPeersRequest {
+                        writer_number: i as u16,
+                    },
+                    local,
+                )
+                .await
+                .unwrap();
         }
 
         // test client peer lists
         for _ in 0..2 {
-            test_client.queue_request(GetClientShardInfoRequest {
-            }, local).await.unwrap();
+            test_client
+                .queue_request(GetClientShardInfoRequest {}, local)
+                .await
+                .unwrap();
         }
 
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
         // assert responses
-        let client_shard_info_responses = test_router_client.get_client_shard_info_responses.lock().unwrap();
-        let shared_peers_responses = test_router_client.get_shared_peers_responses.lock().unwrap();
+        let client_shard_info_responses = test_router_client
+            .get_client_shard_info_responses
+            .lock()
+            .unwrap();
+        let shared_peers_responses = test_router_client
+            .get_shared_peers_responses
+            .lock()
+            .unwrap();
 
         assert_eq!(client_shard_info_responses.len(), 2);
         assert_eq!(shared_peers_responses.len(), 2);
-
-        
-        
     }
-
 }

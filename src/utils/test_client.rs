@@ -1,4 +1,4 @@
-use std::sync::{Arc, RwLock, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 
 use crate::io::router::{RouterBuilder, RouterClient, RouterHandler};
 use crate::messages::requests::query_version_request;
@@ -28,7 +28,7 @@ pub struct TestRouterClient {
     pub read_responses: Arc<Mutex<Vec<ReadResponse>>>,
     pub write_responses: Arc<Mutex<Vec<WriteResponse>>>,
 
-    router: RouterBuilder<TestRouterClientHandler> 
+    router: RouterBuilder<TestRouterClientHandler>,
 }
 
 impl TestRouterClient {
@@ -39,7 +39,7 @@ impl TestRouterClient {
         let get_shared_peers_responses = Arc::new(Mutex::new(Vec::new()));
         let read_responses = Arc::new(Mutex::new(Vec::new()));
         let write_responses = Arc::new(Mutex::new(Vec::new()));
-        
+
         let router_handler = TestRouterClientHandler {
             query_version_responses: query_version_responses.clone(),
             announce_shard_responses: announce_shard_responses.clone(),
@@ -57,14 +57,13 @@ impl TestRouterClient {
             get_shared_peers_responses,
             read_responses,
             write_responses,
-            router
+            router,
         }
     }
 
     pub fn get_client(&self) -> RouterClient<TestRouterClientHandler> {
         self.router.get_router_client()
     }
-
 }
 
 pub struct TestRouterClientHandler {
@@ -121,7 +120,6 @@ impl RouterHandler for TestRouterClientHandler {
         unimplemented!()
     }
 
-
     /// Callbacks for handling responses to outbound requests
     fn handle_announce_shard_response(&self, res: &AnnounceShardResponse) {
         let mut arr = self.announce_shard_responses.lock().unwrap();
@@ -152,5 +150,4 @@ impl RouterHandler for TestRouterClientHandler {
         let mut arr = self.get_shared_peers_responses.lock().unwrap();
         arr.push(res.clone());
     }
-
-   }
+}
