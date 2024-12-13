@@ -35,14 +35,12 @@ struct ReaderWriterBlock {
 }
 
 struct InfoRouter {
-    num_writers: Arc<Mutex<u16>>,
     reader_writers: Arc<Mutex<Vec<ReaderWriterBlock>>>
 }
 
 impl InfoRouter {
     pub fn new(num_writers: u16) -> Self {
         InfoRouter {
-            num_writers: Arc::new(Mutex::new(num_writers)),
             reader_writers: Arc::new(Mutex::new(vec![ReaderWriterBlock { writer: None, readers: Vec::new() }; num_writers as usize]))
         }
     }
@@ -86,30 +84,11 @@ impl RouterHandler for InfoRouter {
           }
         }
     }
-    fn handle_announce_shard_response(&self, res: &AnnounceShardResponse) {
-        unimplemented!()
-    }
-
+  
     fn handle_get_client_shard_info_request(
         &self,
         req: &GetClientShardInfoRequest,
     ) -> GetClientShardInfoResponse {
-        unimplemented!()
-    }
-
-    fn handle_get_version_request(&self, req: &GetVersionRequest) -> GetVersionResponse {
-        unimplemented!();
-    }
-
-    /// Info server does not handle requests in relation to the actual key/value state
-    /// we could change this to return an error response in the future
-    fn handle_query_version_request(&self, req: &QueryVersionRequest) -> QueryVersionResponse {
-        unimplemented!()
-    }
-    fn handle_read_request(&self, req: &ReadRequest) -> ReadResponse {
-        unimplemented!()
-    }
-    fn handle_write_request(&self, req: &WriteRequest) -> WriteResponse {
         unimplemented!()
     }
 
@@ -119,27 +98,38 @@ impl RouterHandler for InfoRouter {
     ) -> GetSharedPeersResponse {
         unimplemented!()
     }
-
-    /// Callbacks for handling responses to outbound requests
-
+  
+    // Unused requests
+    fn handle_query_version_request(&self, req: &QueryVersionRequest) -> QueryVersionResponse {
+        unimplemented!()
+    }
+    fn handle_read_request(&self, req: &ReadRequest) -> ReadResponse {
+        unimplemented!()
+    }
+    fn handle_write_request(&self, req: &WriteRequest) -> WriteResponse {
+        unimplemented!()
+    }
+    fn handle_get_version_request(&self, req: &GetVersionRequest) -> GetVersionResponse {
+        unimplemented!();
+    }
+    
+    // Unused responses
+    fn handle_announce_shard_response(&self, res: &AnnounceShardResponse) {
+        unimplemented!()
+    }
     fn handle_get_client_shard_info_response(&self, res: &GetClientShardInfoResponse) {
         unimplemented!()
     }
-
     fn handle_query_version_response(&self, res: &QueryVersionResponse) {
         unimplemented!()
     }
-
     fn handle_read_response(&self, res: &ReadResponse) {}
-
     fn handle_write_response(&self, res: &WriteResponse) {
         unimplemented!()
     }
-
     fn handle_get_shared_peers_response(&self, res: &GetSharedPeersResponse) {
         unimplemented!()
     }
-
     fn handle_get_version_response(&self, res: &GetVersionResponse) {
         unimplemented!()
     }
