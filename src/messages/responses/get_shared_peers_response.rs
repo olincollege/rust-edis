@@ -1,6 +1,7 @@
 use crate::messages::message::{MessagePayload, MessageType};
 use anyhow::{Context, Result};
 
+#[derive(Clone)]
 pub struct GetSharedPeersResponse {
     pub peer_ips: Vec<(u128, u16)>,
 }

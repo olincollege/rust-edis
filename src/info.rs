@@ -1,5 +1,6 @@
 pub mod io;
 pub mod messages;
+pub mod utils;
 
 use std::mem::uninitialized;
 
@@ -210,3 +211,69 @@ async fn main() -> Result<()> {
     })
     .await?
 }
+
+/*
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::net::{Ipv6Addr, SocketAddrV6};
+
+    use crate::test_utils;
+
+    #[test]
+    fn test_shard_attachment() {
+        let local = SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8080, 0, 0);
+        let info_router = RouterBuilder::new(
+            InfoRouter::new(4),
+            Some(local)
+        );
+
+
+        let client = info_router.get_router_client();
+        client.queue_request(AnnounceShardRequest {
+            shard_type: ShardType::ReadShard,
+            ip: 1,
+            port: 1
+        }, local);
+
+
+        assert_eq!(response.num_write_shards, 4);
+        assert_eq!(response.write_shard_info.len(), 4);
+        assert_eq!(response.read_shard_info.len(), 4);
+    }
+
+    #[test]
+    fn test_handle_announce_shard_request() {
+        let info_router = InfoRouter::new(4);
+        let request = AnnounceShardRequest {
+            shard_type: ShardType::Write as i32,
+            ip: 1,
+            port: 8080,
+        };
+        let response = info_router.handle_announce_shard_request(&request);
+
+        assert!(response.writer_number > 0);
+        assert!(response.writer_number <= 4);
+    }
+
+    #[test]
+    fn test_handle_get_shared_peers_request() {
+        let info_router = InfoRouter::new(4);
+        
+        // First announce a shard
+        let announce_request = AnnounceShardRequest {
+            shard_type: ShardType::Write as i32,
+            ip: 1,
+            port: 8080,
+        };
+        info_router.handle_announce_shard_request(&announce_request);
+
+        // Then get shared peers
+        let request = GetSharedPeersRequest { writer_number: 1 };
+        let response = info_router.handle_get_shared_peers_request(&request);
+
+        assert_eq!(response.peer_ips.len(), 1);
+        assert_eq!(response.peer_ips[0], (1, 8080));
+    }
+}
+*/
