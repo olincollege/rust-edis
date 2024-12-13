@@ -1,5 +1,6 @@
 use crate::io::router::{RouterBuilder, RouterHandler};
 use anyhow::{Ok, Result};
+use messages::requests::announce_shard_request::ShardType;
 use messages::requests::get_client_shard_info_request::GetClientShardInfoRequest;
 use messages::requests::write_request::WriteRequest;
 use messages::responses::get_client_shard_info_response::GetClientShardInfoResponse;
@@ -8,15 +9,16 @@ use rand::Rng;
 use std::collections::HashMap;
 use std::net::{Ipv6Addr, SocketAddrV6};
 use std::sync::{Arc, Mutex};
-use tokio::net::unix::SocketAddr;
 use tokio::time;
 mod io;
 mod messages;
 use crate::messages::{
     requests::{
-        announce_shard_request::AnnounceShardRequest,
-        get_shared_peers_request::GetSharedPeersRequest, get_version_request::GetVersionRequest,
-        query_version_request::QueryVersionRequest, read_request::ReadRequest,
+        announce_shard_request::{AnnounceMessageType, AnnounceShardRequest},
+        get_shared_peers_request::GetSharedPeersRequest,
+        get_version_request::GetVersionRequest,
+        query_version_request::QueryVersionRequest,
+        read_request::ReadRequest,
     },
     responses::{
         announce_shard_response::AnnounceShardResponse,
@@ -187,9 +189,9 @@ async fn main() -> Result<()> {
     tokio::spawn(async move {
         let announce_request = AnnounceShardRequest {
             shard_type: 1,
-            message_type: 0,
-            ip: reader_ip_port.0,
-            port: reader_ip_port.1,
+            message_type: AnnounceMessageType::NewAnnounce as u8,
+            ip: reader_ip_port.ip().to_bits(),
+            port: reader_ip_port.port(),
         };
 
         if let Err(e) = client0
@@ -210,8 +212,8 @@ async fn main() -> Result<()> {
             interval.tick().await;
 
             let announce_request = AnnounceShardRequest {
-                shard_type: 1,
-                message_type: 1,
+                shard_type: ShardType::ReadShard,
+                message_type: AnnounceMessageType::ReAnnounce as u8,
                 ip: reader_ip_port.ip().to_bits(),
                 port: reader_ip_port.port(),
             };
@@ -350,7 +352,7 @@ mod tests {
         let read_shard = ReadShard::new(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8084, 0, 0));
 
         let res = GetSharedPeersResponse {
-            peer_ips: vec![([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 8084)],
+            peer_ips: vec![(1, 8084)],
         };
 
         read_shard.handle_get_shared_peers_response(&res);
