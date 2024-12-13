@@ -24,6 +24,7 @@ use messages::responses::read_response::ReadResponse;
 use messages::responses::write_response::WriteResponse;
 
 use anyhow::Result;
+use rand::seq::SliceRandom;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use std::sync::{Arc, Mutex};
@@ -87,10 +88,47 @@ impl RouterHandler for InfoRouter {
   
     fn handle_get_client_shard_info_request(
         &self,
-        req: &GetClientShardInfoRequest,
+        _req: &GetClientShardInfoRequest,
     ) -> GetClientShardInfoResponse {
-        let mut reader_writers = self.reader_writers.lock().unwrap();
-        unimplemented!()
+        let reader_writers = self.reader_writers.lock().unwrap();
+
+        let mut writers: Vec<(u128, u16)> = Vec::new();
+        let mut readers: Vec<(u128, u16)> = Vec::new();
+
+        for writer_block in reader_writers.iter() {
+            match writer_block.writer {
+                Some(writer) => {
+                    writers.push(writer);
+                    let reader = writer_block.readers.choose(&mut rand::thread_rng());
+                    match reader {
+                        Some(reader) => {
+                            readers.push(reader.clone());
+                        }
+                        None => {
+                            // error
+                            return GetClientShardInfoResponse {
+                                num_write_shards: 0,
+                                read_shard_info: Vec::new(),
+                                write_shard_info: Vec::new()
+                            }
+                        }
+                    }
+                }
+                None => {
+                    // error
+                    return GetClientShardInfoResponse {
+                        num_write_shards: 0,
+                        read_shard_info: Vec::new(),
+                        write_shard_info: Vec::new()
+                    }
+                }
+            }
+        }
+        GetClientShardInfoResponse {
+            num_write_shards: writers.len() as u16,
+            write_shard_info: writers,
+            read_shard_info: readers
+        }
     }
 
     fn handle_get_shared_peers_request(
