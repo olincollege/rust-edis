@@ -5,7 +5,7 @@ use std::mem::uninitialized;
 
 use crate::io::router::{RouterBuilder, RouterHandler};
 
-use messages::requests::announce_shard_request::AnnounceShardRequest;
+use messages::requests::announce_shard_request::{AnnounceShardRequest, ShardType};
 use messages::requests::get_client_shard_info_request::GetClientShardInfoRequest;
 use messages::requests::get_shared_peers_request::GetSharedPeersRequest;
 use messages::requests::get_version_request::GetVersionRequest;
@@ -26,19 +26,65 @@ use messages::responses::write_response::WriteResponse;
 use anyhow::Result;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
+use std::sync::{Arc, Mutex};
 
-struct InfoRouter {}
+#[derive(Clone)]
+struct ReaderWriterBlock {
+    writer: Option<(u128, u16)>,
+    readers: Vec<(u128, u16)>
+}
+
+struct InfoRouter {
+    num_writers: Arc<Mutex<u16>>,
+    reader_writers: Arc<Mutex<Vec<ReaderWriterBlock>>>
+}
 
 impl InfoRouter {
-    pub fn new() -> Self {
-        InfoRouter {}
+    pub fn new(num_writers: u16) -> Self {
+        InfoRouter {
+            num_writers: Arc::new(Mutex::new(num_writers)),
+            reader_writers: Arc::new(Mutex::new(vec![ReaderWriterBlock { writer: None, readers: Vec::new() }; num_writers as usize]))
+        }
     }
 }
 
 impl RouterHandler for InfoRouter {
     /// Callback for handling new requests
     fn handle_announce_shard_request(&self, req: &AnnounceShardRequest) -> AnnounceShardResponse {
-        unimplemented!()
+        match req.shard_type {
+            ShardType::ReadShard => {
+                let mut reader_writers = self.reader_writers.lock().unwrap();
+
+                // find the writer with the smallest number of readers and attach there
+                let writer_idx = reader_writers.iter().enumerate().min_by(|(_, a), (_, b)| {
+                    a.readers.len().cmp(&b.readers.len())
+                }).unwrap().0;
+                reader_writers[writer_idx].readers.push((req.ip,req.port));
+
+                AnnounceShardResponse {
+                    writer_number: writer_idx as u16
+                }
+            }
+            ShardType::WriteShard => {
+                let mut reader_writers = self.reader_writers.lock().unwrap();
+                let first_empty_idx = reader_writers.iter().position(|block| block.writer.is_none());
+                match first_empty_idx {
+                    None => {
+                        println!("too many write shards already attached, skipping");
+                        // todo: have this support an error code
+                        AnnounceShardResponse {
+                            writer_number: 0
+                        }
+                    } 
+                    Some(idx) => {
+                        reader_writers[idx].writer = Some((req.ip,req.port));
+                        AnnounceShardResponse {
+                            writer_number: idx as u16
+                        }
+                    }
+                }
+          }
+        }
     }
     fn handle_announce_shard_response(&self, res: &AnnounceShardResponse) {
         unimplemented!()

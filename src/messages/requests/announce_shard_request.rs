@@ -1,8 +1,16 @@
 use crate::messages::message::{MessagePayload, MessageType};
 use anyhow::{Context, Result};
+use int_enum::IntEnum;
+
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, IntEnum, PartialEq, Eq)]
+pub enum ShardType {
+    ReadShard = 0,
+    WriteShard = 1,
+}
 
 pub struct AnnounceShardRequest {
-    pub shard_type: u8,
+    pub shard_type: ShardType,
     pub ip: u128,
     pub port: u16,
 }
@@ -19,10 +27,10 @@ impl MessagePayload for AnnounceShardRequest {
         MessageType::AnnounceShard
     }
     fn serialize(&self) -> Result<Vec<u8>> {
-        let mut buffer = Vec::new();
+        let mut buffer: Vec<u8> = Vec::new();
 
         // Add shard type (1 byte)
-        buffer.push(self.shard_type);
+        buffer.push(self.shard_type.into());
 
         // Add IP (16 bytes)
         buffer.extend_from_slice(&self.ip.to_le_bytes());
@@ -36,7 +44,7 @@ impl MessagePayload for AnnounceShardRequest {
         let mut offset = 0;
 
         // Read shard type (1 byte)
-        let shard_type = buffer[offset];
+        let shard_type = ShardType::try_from(buffer[offset]).unwrap();
         offset += 1;
 
         // Read IP (16 bytes)
@@ -66,7 +74,7 @@ mod tests {
     #[test]
     fn test_roundtrip_basic() {
         let original = AnnounceShardRequest {
-            shard_type: 1,
+            shard_type: ShardType::WriteShard,
             ip: 1,
             port: 8080,
         };
@@ -84,7 +92,7 @@ mod tests {
             let ip: u128 = rng.gen();
             let port: u16 = rng.gen();
             let original = AnnounceShardRequest {
-                shard_type: 1,
+                shard_type: ShardType::WriteShard,
                 ip,
                 port,
             };
