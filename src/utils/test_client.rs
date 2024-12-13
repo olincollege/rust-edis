@@ -32,7 +32,7 @@ pub struct TestRouterClient {
 }
 
 impl TestRouterClient {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let query_version_responses = Arc::new(Mutex::new(Vec::new()));
         let announce_shard_responses = Arc::new(Mutex::new(Vec::new()));
         let get_client_shard_info_responses = Arc::new(Mutex::new(Vec::new()));
@@ -61,13 +61,13 @@ impl TestRouterClient {
         }
     }
 
-    fn get_client(&self) -> RouterClient<TestRouterClientHandler> {
+    pub fn get_client(&self) -> RouterClient<TestRouterClientHandler> {
         self.router.get_router_client()
     }
 
 }
 
-struct TestRouterClientHandler {
+pub struct TestRouterClientHandler {
     query_version_responses: Arc<Mutex<Vec<QueryVersionResponse>>>,
     announce_shard_responses: Arc<Mutex<Vec<AnnounceShardResponse>>>,
     get_client_shard_info_responses: Arc<Mutex<Vec<GetClientShardInfoResponse>>>,

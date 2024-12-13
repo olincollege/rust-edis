@@ -212,68 +212,75 @@ async fn main() -> Result<()> {
     .await?
 }
 
-/*
 #[cfg(test)]
 mod tests {
+    use utils::test_client::{self, TestRouterClient};
+
     use super::*;
     use std::net::{Ipv6Addr, SocketAddrV6};
 
-    use crate::test_utils;
 
-    #[test]
-    fn test_shard_attachment() {
+    #[tokio::test]
+    async fn test_shard_attachment() {
+        let test_router_client = TestRouterClient::new();
+        let test_client = test_router_client.get_client();
+
+        let write_shards = 2;
+        let read_shards = 4;
+
         let local = SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8080, 0, 0);
         let info_router = RouterBuilder::new(
-            InfoRouter::new(4),
+            InfoRouter::new(2),
             Some(local)
         );
 
+        tokio::spawn(async move {
+            info_router.listen().await.unwrap();
+        });
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
-        let client = info_router.get_router_client();
-        client.queue_request(AnnounceShardRequest {
-            shard_type: ShardType::ReadShard,
-            ip: 1,
-            port: 1
-        }, local);
-
-
-        assert_eq!(response.num_write_shards, 4);
-        assert_eq!(response.write_shard_info.len(), 4);
-        assert_eq!(response.read_shard_info.len(), 4);
-    }
-
-    #[test]
-    fn test_handle_announce_shard_request() {
-        let info_router = InfoRouter::new(4);
-        let request = AnnounceShardRequest {
-            shard_type: ShardType::Write as i32,
-            ip: 1,
-            port: 8080,
-        };
-        let response = info_router.handle_announce_shard_request(&request);
-
-        assert!(response.writer_number > 0);
-        assert!(response.writer_number <= 4);
-    }
-
-    #[test]
-    fn test_handle_get_shared_peers_request() {
-        let info_router = InfoRouter::new(4);
         
-        // First announce a shard
-        let announce_request = AnnounceShardRequest {
-            shard_type: ShardType::Write as i32,
-            ip: 1,
-            port: 8080,
-        };
-        info_router.handle_announce_shard_request(&announce_request);
+        // send a bunch of announcements
+        for i in 0..write_shards {
+            test_client.queue_request(AnnounceShardRequest {
+                shard_type: ShardType::WriteShard,
+                ip: i,
+                port: i as u16
+            }, local).await.unwrap();
+            
+            for j in 0..read_shards {
+                test_client.queue_request(AnnounceShardRequest {
+                    shard_type: ShardType::ReadShard,
+                    ip: j*100,
+                    port: (j*100) as u16
+                }, local).await.unwrap();
+            }
+        }
 
-        // Then get shared peers
-        let request = GetSharedPeersRequest { writer_number: 1 };
-        let response = info_router.handle_get_shared_peers_request(&request);
+        // test peer lists
+        for i in 0..write_shards {
+            test_client.queue_request(GetSharedPeersRequest {
+                writer_number: i as u16 
+            }, local).await.unwrap();
+        }
 
-        assert_eq!(response.peer_ips.len(), 1);
-        assert_eq!(response.peer_ips[0], (1, 8080));
+        // test client peer lists
+        for _ in 0..2 {
+            test_client.queue_request(GetClientShardInfoRequest {
+            }, local).await.unwrap();
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
+        // assert responses
+        let client_shard_info_responses = test_router_client.get_client_shard_info_responses.lock().unwrap();
+        let shared_peers_responses = test_router_client.get_shared_peers_responses.lock().unwrap();
+
+        assert_eq!(client_shard_info_responses.len(), 2);
+        assert_eq!(shared_peers_responses.len(), 2);
+
+        
+        
     }
+
 }
-*/
