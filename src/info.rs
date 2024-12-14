@@ -297,7 +297,7 @@ mod tests {
             .lock()
             .unwrap();
 
-        assert_eq!(client_shard_info_responses.len(), 2);
-        assert_eq!(shared_peers_responses.len(), 2);
+        assert_eq!(client_shard_info_responses.len(), write_shards as usize);
+        assert_eq!(shared_peers_responses.len(), write_shards as usize);
     }
 }

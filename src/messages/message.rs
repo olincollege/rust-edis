@@ -2,12 +2,18 @@ use anyhow::{Context, Result};
 use int_enum::IntEnum;
 use std::any::Any;
 
+use super::requests::announce_shard_request::AnnounceShardRequest;
+use super::requests::get_shared_peers_request::GetSharedPeersRequest;
+use super::requests::get_version_request::GetVersionRequest;
 use super::requests::{
     get_client_shard_info_request::GetClientShardInfoRequest,
     query_version_request::QueryVersionRequest, read_request::ReadRequest,
     write_request::WriteRequest,
 };
 
+use super::responses::announce_shard_response::AnnounceShardResponse;
+use super::responses::get_shared_peers_response::GetSharedPeersResponse;
+use super::responses::get_version_response::GetVersionResponse;
 use super::responses::read_response::ReadResponse;
 use super::responses::write_response::WriteResponse;
 use super::responses::{
@@ -71,6 +77,18 @@ pub fn bytes_as_message(buffer: &[u8]) -> Result<Box<dyn MessagePayload>> {
                 Box::new(Message::<QueryVersionResponse>::deserialize(buffer)?.message_payload)
             }
         },
+        MessageType::AnnounceShard => match is_request {
+            true => Box::new(Message::<AnnounceShardRequest>::deserialize(buffer)?.message_payload),
+            false => Box::new(Message::<AnnounceShardResponse>::deserialize(buffer)?.message_payload)
+        },
+        MessageType::GetSharedPeers => match is_request {
+            true => Box::new(Message::<GetSharedPeersRequest>::deserialize(buffer)?.message_payload),
+            false => Box::new(Message::<GetSharedPeersResponse>::deserialize(buffer)?.message_payload)
+        },
+        MessageType::GetVersion => match is_request {
+            true => Box::new(Message::<GetVersionRequest>::deserialize(buffer)?.message_payload),
+            false => Box::new(Message::<GetVersionResponse>::deserialize(buffer)?.message_payload)
+        }
         _ => {
             println!("failed to parse");
             return Err(anyhow::anyhow!("unsupported message type"));
