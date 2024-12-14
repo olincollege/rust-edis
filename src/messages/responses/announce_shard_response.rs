@@ -1,6 +1,7 @@
 use crate::messages::message::{MessagePayload, MessageType};
 use anyhow::{Context, Result};
 
+#[derive(Clone)]
 pub struct AnnounceShardResponse {
     pub writer_number: u16,
 }

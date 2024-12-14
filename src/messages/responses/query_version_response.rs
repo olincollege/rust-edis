@@ -4,6 +4,7 @@ use anyhow::{Context, Result};
 /// Layout of the QueryVersionResponse
 /// | 8 bytes |
 /// | version |
+#[derive(Clone)]
 pub struct QueryVersionResponse {
     pub version: u64,
 }

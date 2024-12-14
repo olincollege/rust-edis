@@ -26,7 +26,7 @@ pub async fn read_message(stream: &mut OwnedReadHalf) -> Result<Box<dyn MessageP
     //println!("reading message length: {total_length}");
 
     // read the rest of the message
-    while let Ok(bytes_read) = stream.read(&mut buffer[buffer_idx..]).await {
+    while let Ok(bytes_read) = stream.read(&mut buffer[buffer_idx..total_length]).await {
         match bytes_read {
             0 => {
                 return Err(anyhow::anyhow!("connection closed"));
