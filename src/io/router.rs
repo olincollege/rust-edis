@@ -81,6 +81,8 @@ pub struct RouterBuilder<H: RouterHandler> {
     pub write_sockets: Arc<HashMap<SocketAddrV6, tokio::net::tcp::OwnedWriteHalf>>,
 
     pub bind_addr: Option<SocketAddrV6>,
+
+    listener: Option<TcpListener>,
 }
 
 /// Owned struct returned from RouterBuilder that allows for
@@ -125,6 +127,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
             handler: Arc::new(handler),
             write_sockets: Arc::new(scc::HashMap::new()),
             bind_addr,
+            listener: None,
         }
     }
 
@@ -133,6 +136,10 @@ impl<H: RouterHandler> RouterBuilder<H> {
             handler: self.handler.clone(),
             write_sockets: self.write_sockets.clone(),
         }
+    }
+
+    pub fn get_handler_arc(&self) -> Arc<H> {
+        self.handler.clone()
     }
 
     /// Function for queueing outbound responses
@@ -373,8 +380,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
         }
     }
 
-    /// Makes the router start listening for inbound requests
-    pub async fn listen(&self) -> Result<()> {
+    pub async fn bind(&mut self) -> Result<SocketAddrV6> {
         let listener = TcpListener::bind(self.bind_addr.unwrap_or(SocketAddrV6::new(
             Ipv6Addr::LOCALHOST,
             0,
@@ -382,33 +388,55 @@ impl<H: RouterHandler> RouterBuilder<H> {
             0,
         )))
         .await?;
-        println!("listening on {}", listener.local_addr()?);
 
+        let addr = listener.local_addr()?;
+        println!("listening on {}", addr);
+
+        match addr {
+            V6(addr) => {
+                self.listener = Some(listener);
+                Ok(addr)
+            }
+            V4(_) => {
+                anyhow::bail!("IPv4 addresses are not supported, please use IPv6")
+            }
+        }
+    }
+    /// Makes the router start listening for inbound requests
+    pub async fn listen(&mut self) -> Result<()> {
         loop {
             //let (mut socket, addr) = Arc::new(listener.accept().await?);
-            let (socket, addr) = listener.accept().await?;
-            //println!("accepted connection!");
+            let listener = self.listener.as_mut();
 
-            match addr {
-                V6(addr) => {
-                    let (read, write) = socket.into_split();
+            match listener {
+                Some(listener) => {
+                    let (socket, addr) = listener.accept().await?;
+                    match addr {
+                        V6(addr) => {
+                            let (read, write) = socket.into_split();
 
-                    // new peer discovered, add to our list of write sockets
-                    self.write_sockets
-                        .insert_async(addr.clone(), write)
-                        .await
-                        .unwrap();
+                            // new peer discovered, add to our list of write sockets
+                            self.write_sockets
+                                .insert_async(addr.clone(), write)
+                                .await
+                                .unwrap();
 
-                    // bind the read half to a background task
-                    let handler = self.handler.clone();
-                    let write_sockets = self.write_sockets.clone();
-                    tokio::spawn(async move {
-                        Self::listen_read_half_socket(write_sockets, handler, read).await?;
-                        Ok(())
-                    });
+                            // bind the read half to a background task
+                            let handler = self.handler.clone();
+                            let write_sockets = self.write_sockets.clone();
+                            tokio::spawn(async move {
+                                Self::listen_read_half_socket(write_sockets, handler, read).await?;
+                                Ok(())
+                            });
+                        }
+                        V4(_addr) => {
+                            println!("ignoring ipv4 connection, please use ipv6");
+                        }
+                    }
                 }
-                V4(_addr) => {
-                    println!("ignoring ipv4 connection, please use ipv6");
+                None => {
+                    println!("bind() needs to be called before listen!");
+                    anyhow::bail!("bind() needs to be called before listen!");
                 }
             }
         }

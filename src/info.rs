@@ -204,8 +204,9 @@ impl RouterHandler for InfoRouter {
 #[tokio::main]
 async fn main() -> Result<()> {
     let info_router = InfoRouter::new(4);
-    let info_server = RouterBuilder::new(info_router, None);
+    let mut info_server = RouterBuilder::new(info_router, None);
     tokio::spawn(async move {
+        info_server.bind().await?;
         info_server.listen().await?;
         Ok(())
     })
@@ -214,6 +215,7 @@ async fn main() -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use messages::requests::announce_shard_request::AnnounceMessageType;
     use serial_test::serial;
     use utils::test_client::{self, TestRouterClient};
 
@@ -230,9 +232,10 @@ mod tests {
         let read_shards = 4;
 
         let local = SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8080, 0, 0);
-        let info_router = RouterBuilder::new(InfoRouter::new(2), Some(local));
+        let mut info_router = RouterBuilder::new(InfoRouter::new(2), Some(local));
 
         tokio::spawn(async move {
+            info_router.bind().await.unwrap();
             info_router.listen().await.unwrap();
         });
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
@@ -243,6 +246,7 @@ mod tests {
                 .queue_request(
                     AnnounceShardRequest {
                         shard_type: ShardType::WriteShard,
+                        message_type: AnnounceMessageType::NewAnnounce as u8,
                         ip: i,
                         port: i as u16,
                     },
@@ -256,6 +260,7 @@ mod tests {
                     .queue_request(
                         AnnounceShardRequest {
                             shard_type: ShardType::ReadShard,
+                            message_type: AnnounceMessageType::NewAnnounce as u8,
                             ip: (j + 1) * 100,
                             port: ((j + 1) * 100) as u16,
                         },

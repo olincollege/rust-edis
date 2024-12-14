@@ -90,7 +90,7 @@ mod tests {
     #[test]
     fn test_roundtrip_basic() {
         let original = AnnounceShardRequest {
-            message_type: 1,
+            message_type: AnnounceMessageType::NewAnnounce as u8,
             shard_type: ShardType::WriteShard,
             ip: 1,
             port: 8080,
@@ -109,7 +109,7 @@ mod tests {
             let ip: u128 = rng.gen();
             let port: u16 = rng.gen();
             let original = AnnounceShardRequest {
-                message_type: 1,
+                message_type: AnnounceMessageType::NewAnnounce as u8,
                 shard_type: ShardType::WriteShard,
                 ip,
                 port,
