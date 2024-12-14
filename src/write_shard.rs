@@ -1,6 +1,10 @@
 use anyhow::Result;
+use io::write;
+use messages::requests::announce_shard_request::{AnnounceMessageType, ShardType};
 use std::collections::HashMap;
+use std::net::{Ipv6Addr, SocketAddrV6};
 use std::sync::{Arc, Mutex};
+use tokio::time;
 mod messages;
 use crate::messages::{
     requests::{
@@ -22,6 +26,8 @@ use crate::messages::{
 };
 mod io;
 use io::router::{RouterBuilder, RouterHandler};
+
+static MAIN_INSTANCE_IP_PORT: SocketAddrV6 = SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8080, 0, 0);
 
 #[derive(Debug)]
 struct WriteShard {
@@ -156,8 +162,51 @@ impl RouterHandler for WriteShard {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let info_router = WriteShard::new();
-    let info_server = RouterBuilder::new(info_router, None);
+    let writer_ip_port = SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8085, 0, 0);
+
+    let info_router = Arc::new(WriteShard::new());
+    let router_clone_1 = Arc::clone(&info_router);
+    let info_server = RouterBuilder::new(Arc::try_unwrap(router_clone_1).unwrap(), None);
+
+    let client0 = info_server.get_router_client();
+    tokio::spawn(async move {
+        let announce_request = AnnounceShardRequest {
+            shard_type: ShardType::WriteShard,
+            message_type: AnnounceMessageType::NewAnnounce as u8,
+            ip: writer_ip_port.ip().to_bits(),
+            port: writer_ip_port.port(),
+        };
+
+        if let Err(e) = client0
+            .queue_request::<AnnounceShardRequest>(announce_request, MAIN_INSTANCE_IP_PORT)
+            .await
+        {
+            eprintln!("Failed to send AnnounceShardRequest: {:?}", e);
+        }
+    });
+
+    let client1 = info_server.get_router_client();
+    tokio::spawn(async move {
+        let mut interval = time::interval(time::Duration::from_secs(3));
+        loop {
+            interval.tick().await;
+
+            let announce_request = AnnounceShardRequest {
+                shard_type: ShardType::WriteShard,
+                message_type: AnnounceMessageType::ReAnnounce as u8,
+                ip: writer_ip_port.ip().to_bits(),
+                port: writer_ip_port.port(),
+            };
+
+            if let Err(e) = client1
+                .queue_request::<AnnounceShardRequest>(announce_request, MAIN_INSTANCE_IP_PORT)
+                .await
+            {
+                eprintln!("Failed to send AnnounceShardRequest: {:?}", e);
+            }
+        }
+    });
+
     tokio::spawn(async move {
         info_server.listen().await?;
         Ok(())
