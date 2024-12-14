@@ -123,7 +123,7 @@ mod test {
             },
             Some(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8080, 0, 0)),
         );
-        let router2: RouterBuilder<ExampleRouterHandler> = RouterBuilder::new(
+        let mut router2: RouterBuilder<ExampleRouterHandler> = RouterBuilder::new(
             ExampleRouterHandler {
                 debug_out: debug_out2.clone(),
             },
@@ -131,6 +131,7 @@ mod test {
         );
 
         tokio::spawn(async move {
+            router2.bind().await?;
             router2.listen().await?;
             Ok(())
         });

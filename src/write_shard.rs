@@ -157,7 +157,7 @@ impl RouterHandler for WriteShard {
 #[tokio::main]
 async fn main() -> Result<()> {
     let info_router = WriteShard::new();
-    let info_server = RouterBuilder::new(info_router, None);
+    let mut info_server = RouterBuilder::new(info_router, None);
     tokio::spawn(async move {
         info_server.listen().await?;
         Ok(())

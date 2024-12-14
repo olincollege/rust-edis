@@ -31,7 +31,6 @@ static MAIN_INSTANCE_IP_PORT: SocketAddrV6 = SocketAddrV6::new(Ipv6Addr::LOCALHO
 
 #[derive(Clone, Debug)]
 pub struct ReadShard {
-    _reader_ip_port: Arc<Mutex<SocketAddrV6>>,
     writer_id: Arc<Mutex<u16>>,
     peers: Arc<Mutex<Vec<SocketAddrV6>>>,
     requested_version: Arc<Mutex<u64>>,
@@ -163,9 +162,8 @@ impl RouterHandler for ReadShard {
 }
 
 impl ReadShard {
-    pub fn new(reader_ip_port: SocketAddrV6) -> ReadShard {
+    pub fn new() -> ReadShard {
         ReadShard {
-            _reader_ip_port: Arc::new(Mutex::new(reader_ip_port)),
             writer_id: Arc::new(Mutex::new(0)),
             peers: Arc::new(Mutex::new(Vec::new())),
             requested_version: Arc::new(Mutex::new(0)),
@@ -178,13 +176,14 @@ impl ReadShard {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let reader_ip_port = SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8084, 0, 0);
 
-    let info_router = Arc::new(ReadShard::new(reader_ip_port));
-    let router_clone_1 = Arc::clone(&info_router);
-    let info_server = RouterBuilder::new(Arc::try_unwrap(router_clone_1).unwrap(), None);
+    let read_shard_router = ReadShard::new();
+    let mut read_shard_server = RouterBuilder::new(read_shard_router, None);
+    let read_shard_router = read_shard_server.get_handler_arc();
+    let reader_ip_port = read_shard_server.bind().await?;
 
-    let client1 = info_server.get_router_client();
+
+    let client1 = read_shard_server.get_router_client();
     tokio::spawn(async move {
         let mut interval = time::interval(time::Duration::from_secs(3));
         loop {
@@ -205,8 +204,8 @@ async fn main() -> Result<()> {
         }
     });
 
-    let router_clone_2 = Arc::clone(&info_router);
-    let client2 = info_server.get_router_client();
+    let router_clone_2 = read_shard_router.clone();
+    let client2 = read_shard_server.get_router_client();
     tokio::spawn({
         async move {
             let mut interval = time::interval(time::Duration::from_secs(3));
@@ -230,9 +229,9 @@ async fn main() -> Result<()> {
         }
     });
 
-    let client3 = info_server.get_router_client();
-    let client4 = info_server.get_router_client();
-    let router_clone_3 = Arc::clone(&info_router);
+    let client3 = read_shard_server.get_router_client();
+    let client4 = read_shard_server.get_router_client();
+    let router_clone_3 = read_shard_router.clone();
     tokio::spawn({
         async move {
             let mut interval = time::interval(time::Duration::from_secs(3));
@@ -281,7 +280,7 @@ async fn main() -> Result<()> {
     });
 
     tokio::spawn(async move {
-        if let Err(e) = info_server.listen().await {
+        if let Err(e) = read_shard_server.listen().await {
             eprintln!("Server failed: {:?}", e);
         }
     });
@@ -295,7 +294,7 @@ mod tests {
 
     #[test]
     fn test_handle_read_request() {
-        let read_shard = ReadShard::new(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8084, 0, 0));
+        let read_shard = ReadShard::new();
 
         read_shard
             .data
@@ -315,7 +314,7 @@ mod tests {
 
     #[test]
     fn test_handle_announce_shard_response() {
-        let read_shard = ReadShard::new(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8084, 0, 0));
+        let read_shard = ReadShard::new();
 
         let announce_shard_response = AnnounceShardResponse { writer_number: 1 };
 
@@ -327,7 +326,7 @@ mod tests {
 
     #[test]
     fn test_handle_get_shared_peers_response() {
-        let read_shard = ReadShard::new(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8084, 0, 0));
+        let read_shard = ReadShard::new();
 
         let res = GetSharedPeersResponse {
             peer_ips: vec![(1, 8084)],
@@ -349,7 +348,7 @@ mod tests {
 
     #[test]
     fn test_handle_query_version_response() {
-        let read_shard = ReadShard::new(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8084, 0, 0));
+        let read_shard = ReadShard::new();
 
         let res = QueryVersionResponse { version: 1 };
 
@@ -361,7 +360,7 @@ mod tests {
 
     #[test]
     fn test_handle_get_version_response() {
-        let read_shard = ReadShard::new(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8084, 0, 0));
+        let read_shard = ReadShard::new();
 
         let get_version_response = GetVersionResponse {
             key: b"key".to_vec(),
@@ -378,7 +377,7 @@ mod tests {
 
     #[test]
     fn test_handle_query_version_request() {
-        let read_shard = ReadShard::new(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8084, 0, 0));
+        let read_shard = ReadShard::new();
 
         let req = QueryVersionRequest {};
 
@@ -389,7 +388,7 @@ mod tests {
 
     #[test]
     fn test_handle_get_version_request() {
-        let read_shard = ReadShard::new(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8084, 0, 0));
+        let read_shard = ReadShard::new();
 
         read_shard
             .data
