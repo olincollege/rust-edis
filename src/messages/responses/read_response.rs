@@ -9,6 +9,7 @@ pub enum ReadResponseError {
     KeyNotFound = 1,
 }
 
+#[derive(Clone)]
 pub struct ReadResponse {
     pub key: Vec<u8>,
     pub value: Vec<u8>,

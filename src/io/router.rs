@@ -196,13 +196,11 @@ impl<H: RouterHandler> RouterBuilder<H> {
         mut read: OwnedReadHalf,
     ) -> Result<()> {
         loop {
-            //println!("waiting for read");
             read.readable().await?;
             //println!("done waiting for read");
             let message = read_message(&mut read).await?;
             let peer = read.peer_addr()?;
 
-            //println!("read message");
             match peer {
                 V6(peer) => {
                     match message.is_request() {

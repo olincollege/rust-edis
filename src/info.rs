@@ -1,5 +1,6 @@
 pub mod io;
 pub mod messages;
+pub mod utils;
 
 use std::mem::uninitialized;
 
@@ -209,4 +210,131 @@ async fn main() -> Result<()> {
         Ok(())
     })
     .await?
+}
+
+#[cfg(test)]
+mod tests {
+    use serial_test::serial;
+    use utils::test_client::{self, TestRouterClient};
+
+    use super::*;
+    use std::net::{Ipv6Addr, SocketAddrV6};
+
+    #[serial]
+    #[tokio::test]
+    async fn test_shard_attachment() {
+        let test_router_client = TestRouterClient::new();
+        let test_client = test_router_client.get_client();
+
+        let write_shards = 2;
+        let read_shards = 4;
+
+        let local = SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8080, 0, 0);
+        let info_router = RouterBuilder::new(InfoRouter::new(2), Some(local));
+
+        tokio::spawn(async move {
+            info_router.listen().await.unwrap();
+        });
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
+        // send a bunch of announcements
+        for i in 0..write_shards {
+            test_client
+                .queue_request(
+                    AnnounceShardRequest {
+                        shard_type: ShardType::WriteShard,
+                        ip: i,
+                        port: i as u16,
+                    },
+                    local,
+                )
+                .await
+                .unwrap();
+
+            for j in 0..read_shards {
+                test_client
+                    .queue_request(
+                        AnnounceShardRequest {
+                            shard_type: ShardType::ReadShard,
+                            ip: (j + 1) * 100,
+                            port: ((j + 1) * 100) as u16,
+                        },
+                        local,
+                    )
+                    .await
+                    .unwrap();
+            }
+        }
+
+        // test peer lists
+        for i in 0..write_shards {
+            test_client
+                .queue_request(
+                    GetSharedPeersRequest {
+                        writer_number: i as u16,
+                    },
+                    local,
+                )
+                .await
+                .unwrap();
+        }
+
+        // test client peer lists
+        let num_get_client_shard_info_requests = 2;
+        for _ in 0..num_get_client_shard_info_requests {
+            test_client
+                .queue_request(GetClientShardInfoRequest {}, local)
+                .await
+                .unwrap();
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
+        // assert responses
+        let client_shard_info_responses = test_router_client
+            .get_client_shard_info_responses
+            .lock()
+            .unwrap();
+        let shared_peers_responses = test_router_client
+            .get_shared_peers_responses
+            .lock()
+            .unwrap();
+
+        assert_eq!(shared_peers_responses.len(), write_shards as usize);
+        for i in 0..(write_shards as usize) {
+            assert_eq!(shared_peers_responses[i].peer_ips[0].0, i as u128);
+            assert_eq!(shared_peers_responses[i].peer_ips[0].1, i as u16);
+            for j in 0..(read_shards as usize) {
+                assert!(shared_peers_responses[i].peer_ips[1 + j].0 >= 100 as u128);
+                assert!(shared_peers_responses[i].peer_ips[1 + j].1 >= 100 as u16);
+            }
+        }
+
+        assert_eq!(
+            client_shard_info_responses.len(),
+            num_get_client_shard_info_requests as usize
+        );
+        assert_eq!(
+            client_shard_info_responses[0].num_write_shards,
+            write_shards as u16
+        );
+        assert_eq!(
+            client_shard_info_responses[0].write_shard_info.len(),
+            write_shards as usize
+        );
+        for i in 0..(write_shards as usize) {
+            assert_eq!(
+                client_shard_info_responses[0].write_shard_info[i].0,
+                i as u128
+            );
+            assert_eq!(
+                client_shard_info_responses[0].write_shard_info[i].1,
+                i as u16
+            );
+        }
+        assert_eq!(
+            client_shard_info_responses[0].read_shard_info.len(),
+            write_shards as usize
+        );
+    }
 }
