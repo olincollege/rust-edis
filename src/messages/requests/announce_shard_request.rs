@@ -3,13 +3,14 @@ use anyhow::{Context, Result};
 
 pub struct AnnounceShardRequest {
     pub shard_type: u8,
+    pub message_type: u8,
     pub ip: [u8; 16],
     pub port: u16,
 }
 
 /// Layout of the AnnounceShardRequest
-/// | 1 byte  | 16 bytes | 2 bytes |
-/// | Shard Type |   IP    |   port  |
+/// | 1 byte     | 1 byte       | 16 bytes | 2 bytes |
+/// | Shard Type | message type |   IP     |   port  |
 impl MessagePayload for AnnounceShardRequest {
     fn is_request(&self) -> bool {
         true
@@ -23,6 +24,9 @@ impl MessagePayload for AnnounceShardRequest {
 
         // Add shard type (1 byte)
         buffer.push(self.shard_type);
+
+        // Add message type (1 byte)
+        buffer.push(self.message_type);
 
         // Add IP (16 bytes)
         buffer.extend_from_slice(&self.ip);
@@ -39,6 +43,10 @@ impl MessagePayload for AnnounceShardRequest {
         let shard_type = buffer[offset];
         offset += 1;
 
+        // Read message type (1 byte)
+        let message_type = buffer[offset];
+        offset += 1;
+
         // Read IP (16 bytes)
         let ip =
             <[u8; 16]>::try_from(&buffer[offset..offset + 16]).context("failed to get IP bytes")?;
@@ -51,6 +59,7 @@ impl MessagePayload for AnnounceShardRequest {
 
         Ok(AnnounceShardRequest {
             shard_type,
+            message_type,
             ip,
             port,
         })
@@ -66,6 +75,7 @@ mod tests {
     fn test_roundtrip_basic() {
         let original = AnnounceShardRequest {
             shard_type: 1,
+            message_type: 1,
             ip: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             port: 8080,
         };
@@ -84,6 +94,7 @@ mod tests {
             let port: u16 = rng.gen();
             let original = AnnounceShardRequest {
                 shard_type: 1,
+                message_type: 1,
                 ip,
                 port,
             };

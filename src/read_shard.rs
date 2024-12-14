@@ -6,6 +6,7 @@ use messages::responses::get_client_shard_info_response::GetClientShardInfoRespo
 use messages::responses::write_response::WriteResponse;
 use rand::Rng;
 use std::collections::HashMap;
+use std::net::Ipv6Addr;
 use std::sync::{Arc, Mutex};
 use tokio::time;
 mod io;
@@ -170,15 +171,8 @@ impl ReadShard {
 }
 
 pub fn socket_addr_to_string(addr: ([u8; 16], u16)) -> String {
-    format!(
-        "{}:{}",
-        addr.0
-            .iter()
-            .map(|x| x.to_string())
-            .collect::<Vec<String>>()
-            .join("."),
-        addr.1
-    )
+    let ip = Ipv6Addr::from(addr.0);
+    format!("{}:{}", ip, addr.1)
 }
 
 #[tokio::main]
@@ -189,6 +183,26 @@ async fn main() -> Result<()> {
     let router_clone_1 = Arc::clone(&info_router);
     let info_server = RouterBuilder::new(Arc::try_unwrap(router_clone_1).unwrap(), None);
 
+    let client0 = info_server.get_router_client();
+    tokio::spawn(async move {
+        let announce_request = AnnounceShardRequest {
+            shard_type: 1,
+            message_type: 0,
+            ip: reader_ip_port.0,
+            port: reader_ip_port.1,
+        };
+
+        if let Err(e) = client0
+            .queue_request::<AnnounceShardRequest>(
+                announce_request,
+                socket_addr_to_string(MAIN_INSTANCE_IP_PORT),
+            )
+            .await
+        {
+            eprintln!("Failed to send AnnounceShardRequest: {:?}", e);
+        }
+    });
+
     let client1 = info_server.get_router_client();
     tokio::spawn(async move {
         let mut interval = time::interval(time::Duration::from_secs(3));
@@ -197,6 +211,7 @@ async fn main() -> Result<()> {
 
             let announce_request = AnnounceShardRequest {
                 shard_type: 1,
+                message_type: 1,
                 ip: reader_ip_port.0,
                 port: reader_ip_port.1,
             };
