@@ -215,6 +215,7 @@ async fn main() -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use messages::requests::announce_shard_request::AnnounceMessageType;
     use serial_test::serial;
     use utils::test_client::{self, TestRouterClient};
 
@@ -245,6 +246,7 @@ mod tests {
                 .queue_request(
                     AnnounceShardRequest {
                         shard_type: ShardType::WriteShard,
+                        message_type: AnnounceMessageType::NewAnnounce as u8,
                         ip: i,
                         port: i as u16,
                     },
@@ -258,6 +260,7 @@ mod tests {
                     .queue_request(
                         AnnounceShardRequest {
                             shard_type: ShardType::ReadShard,
+                            message_type: AnnounceMessageType::NewAnnounce as u8,
                             ip: (j + 1) * 100,
                             port: ((j + 1) * 100) as u16,
                         },

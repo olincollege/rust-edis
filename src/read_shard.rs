@@ -9,15 +9,16 @@ use rand::Rng;
 use std::collections::HashMap;
 use std::net::{Ipv6Addr, SocketAddrV6};
 use std::sync::{Arc, Mutex};
-use tokio::net::unix::SocketAddr;
 use tokio::time;
 mod io;
 mod messages;
 use crate::messages::{
     requests::{
-        announce_shard_request::AnnounceShardRequest,
-        get_shared_peers_request::GetSharedPeersRequest, get_version_request::GetVersionRequest,
-        query_version_request::QueryVersionRequest, read_request::ReadRequest,
+        announce_shard_request::{AnnounceMessageType, AnnounceShardRequest},
+        get_shared_peers_request::GetSharedPeersRequest,
+        get_version_request::GetVersionRequest,
+        query_version_request::QueryVersionRequest,
+        read_request::ReadRequest,
     },
     responses::{
         announce_shard_response::AnnounceShardResponse,
@@ -181,6 +182,23 @@ async fn main() -> Result<()> {
     let read_shard_router = read_shard_server.get_handler_arc();
     let reader_ip_port = read_shard_server.bind().await?;
 
+    let client0 = read_shard_server.get_router_client();
+    tokio::spawn(async move {
+        let announce_request = AnnounceShardRequest {
+            shard_type: ShardType::ReadShard,
+            message_type: AnnounceMessageType::NewAnnounce as u8,
+            ip: reader_ip_port.ip().to_bits(),
+            port: reader_ip_port.port(),
+        };
+
+        if let Err(e) = client0
+            .queue_request::<AnnounceShardRequest>(announce_request, MAIN_INSTANCE_IP_PORT)
+            .await
+        {
+            eprintln!("Failed to send AnnounceShardRequest: {:?}", e);
+        }
+    });
+
     let client1 = read_shard_server.get_router_client();
     tokio::spawn(async move {
         let mut interval = time::interval(time::Duration::from_secs(3));
@@ -189,6 +207,7 @@ async fn main() -> Result<()> {
 
             let announce_request = AnnounceShardRequest {
                 shard_type: ShardType::ReadShard,
+                message_type: AnnounceMessageType::ReAnnounce as u8,
                 ip: reader_ip_port.ip().to_bits(),
                 port: reader_ip_port.port(),
             };
