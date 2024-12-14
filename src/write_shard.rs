@@ -162,13 +162,11 @@ impl RouterHandler for WriteShard {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let writer_ip_port = SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8085, 0, 0);
+    let write_shard_router = WriteShard::new();
+    let mut write_shard_server = RouterBuilder::new(write_shard_router, None);
+    let writer_ip_port = write_shard_server.bind().await?;
 
-    let info_router = Arc::new(WriteShard::new());
-    let router_clone_1 = Arc::clone(&info_router);
-    let info_server = RouterBuilder::new(Arc::try_unwrap(router_clone_1).unwrap(), None);
-
-    let client0 = info_server.get_router_client();
+    let client0 = write_shard_server.get_router_client();
     tokio::spawn(async move {
         let announce_request = AnnounceShardRequest {
             shard_type: ShardType::WriteShard,
@@ -185,7 +183,7 @@ async fn main() -> Result<()> {
         }
     });
 
-    let client1 = info_server.get_router_client();
+    let client1 = write_shard_server.get_router_client();
     tokio::spawn(async move {
         let mut interval = time::interval(time::Duration::from_secs(3));
         loop {
@@ -208,8 +206,10 @@ async fn main() -> Result<()> {
     });
 
     tokio::spawn(async move {
-        info_server.listen().await?;
-        Ok(())
-    })
-    .await?
+        if let Err(e) = write_shard_server.listen().await {
+            eprintln!("Server failed: {:?}", e);
+        }
+    });
+
+    Ok(())
 }
