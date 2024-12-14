@@ -127,7 +127,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
             handler: Arc::new(handler),
             write_sockets: Arc::new(scc::HashMap::new()),
             bind_addr,
-            listener: None
+            listener: None,
         }
     }
 
@@ -401,27 +401,26 @@ impl<H: RouterHandler> RouterBuilder<H> {
                 anyhow::bail!("IPv4 addresses are not supported, please use IPv6")
             }
         }
-        
     }
     /// Makes the router start listening for inbound requests
     pub async fn listen(&mut self) -> Result<()> {
         loop {
             //let (mut socket, addr) = Arc::new(listener.accept().await?);
-            let listener = self.listener.as_mut(); 
-            
+            let listener = self.listener.as_mut();
+
             match listener {
                 Some(listener) => {
                     let (socket, addr) = listener.accept().await?;
                     match addr {
                         V6(addr) => {
                             let (read, write) = socket.into_split();
-        
+
                             // new peer discovered, add to our list of write sockets
                             self.write_sockets
                                 .insert_async(addr.clone(), write)
                                 .await
                                 .unwrap();
-        
+
                             // bind the read half to a background task
                             let handler = self.handler.clone();
                             let write_sockets = self.write_sockets.clone();

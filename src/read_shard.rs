@@ -176,12 +176,10 @@ impl ReadShard {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-
     let read_shard_router = ReadShard::new();
     let mut read_shard_server = RouterBuilder::new(read_shard_router, None);
     let read_shard_router = read_shard_server.get_handler_arc();
     let reader_ip_port = read_shard_server.bind().await?;
-
 
     let client1 = read_shard_server.get_router_client();
     tokio::spawn(async move {
