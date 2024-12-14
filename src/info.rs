@@ -214,11 +214,13 @@ async fn main() -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
     use utils::test_client::{self, TestRouterClient};
 
     use super::*;
     use std::net::{Ipv6Addr, SocketAddrV6};
 
+    #[serial]
     #[tokio::test]
     async fn test_shard_attachment() {
         let test_router_client = TestRouterClient::new();
@@ -254,8 +256,8 @@ mod tests {
                     .queue_request(
                         AnnounceShardRequest {
                             shard_type: ShardType::ReadShard,
-                            ip: j * 100,
-                            port: (j * 100) as u16,
+                            ip: (j+1) * 100,
+                            port: ((j+1) * 100) as u16,
                         },
                         local,
                     )
@@ -278,7 +280,8 @@ mod tests {
         }
 
         // test client peer lists
-        for _ in 0..2 {
+        let num_get_client_shard_info_requests = 2;
+        for _ in 0..num_get_client_shard_info_requests {
             test_client
                 .queue_request(GetClientShardInfoRequest {}, local)
                 .await
@@ -297,7 +300,24 @@ mod tests {
             .lock()
             .unwrap();
 
-        assert_eq!(client_shard_info_responses.len(), write_shards as usize);
         assert_eq!(shared_peers_responses.len(), write_shards as usize);
+        for i in 0..(write_shards as usize) {
+            assert_eq!(shared_peers_responses[i].peer_ips[0].0, i as u128);
+            assert_eq!(shared_peers_responses[i].peer_ips[0].1, i as u16);
+            for j in 0..(read_shards as usize) {
+                assert!(shared_peers_responses[i].peer_ips[1+j].0 >= 100 as u128);
+                assert!(shared_peers_responses[i].peer_ips[1+j].1 >= 100 as u16);
+            }
+        }
+
+        assert_eq!(client_shard_info_responses.len(), num_get_client_shard_info_requests as usize);
+        assert_eq!(client_shard_info_responses[0].num_write_shards, write_shards as u16);
+        assert_eq!(client_shard_info_responses[0].write_shard_info.len(), write_shards as usize);
+        for i in 0..(write_shards as usize) {
+            assert_eq!(client_shard_info_responses[0].write_shard_info[i].0, i as u128);
+            assert_eq!(client_shard_info_responses[0].write_shard_info[i].1, i as u16);
+        }
+        assert_eq!(client_shard_info_responses[0].read_shard_info.len(), write_shards as usize);
+
     }
 }

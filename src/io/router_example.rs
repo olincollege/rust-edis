@@ -109,7 +109,9 @@ mod test {
         },
     };
     use anyhow::{Ok, Result};
+    use serial_test::serial;
 
+    #[serial]
     #[tokio::test]
     async fn test_example_router() -> Result<()> {
         let debug_out1: Arc<RwLock<Vec<Vec<u8>>>> = Arc::new(RwLock::new(Vec::new()));
