@@ -204,8 +204,9 @@ impl RouterHandler for InfoRouter {
 #[tokio::main]
 async fn main() -> Result<()> {
     let info_router = InfoRouter::new(4);
-    let info_server = RouterBuilder::new(info_router, None);
+    let mut info_server = RouterBuilder::new(info_router, None);
     tokio::spawn(async move {
+        info_server.bind().await?;
         info_server.listen().await?;
         Ok(())
     })
@@ -230,9 +231,10 @@ mod tests {
         let read_shards = 4;
 
         let local = SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8080, 0, 0);
-        let info_router = RouterBuilder::new(InfoRouter::new(2), Some(local));
+        let mut info_router = RouterBuilder::new(InfoRouter::new(2), Some(local));
 
         tokio::spawn(async move {
+            info_router.bind().await.unwrap();
             info_router.listen().await.unwrap();
         });
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
