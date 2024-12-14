@@ -79,16 +79,22 @@ pub fn bytes_as_message(buffer: &[u8]) -> Result<Box<dyn MessagePayload>> {
         },
         MessageType::AnnounceShard => match is_request {
             true => Box::new(Message::<AnnounceShardRequest>::deserialize(buffer)?.message_payload),
-            false => Box::new(Message::<AnnounceShardResponse>::deserialize(buffer)?.message_payload)
+            false => {
+                Box::new(Message::<AnnounceShardResponse>::deserialize(buffer)?.message_payload)
+            }
         },
         MessageType::GetSharedPeers => match is_request {
-            true => Box::new(Message::<GetSharedPeersRequest>::deserialize(buffer)?.message_payload),
-            false => Box::new(Message::<GetSharedPeersResponse>::deserialize(buffer)?.message_payload)
+            true => {
+                Box::new(Message::<GetSharedPeersRequest>::deserialize(buffer)?.message_payload)
+            }
+            false => {
+                Box::new(Message::<GetSharedPeersResponse>::deserialize(buffer)?.message_payload)
+            }
         },
         MessageType::GetVersion => match is_request {
             true => Box::new(Message::<GetVersionRequest>::deserialize(buffer)?.message_payload),
-            false => Box::new(Message::<GetVersionResponse>::deserialize(buffer)?.message_payload)
-        }
+            false => Box::new(Message::<GetVersionResponse>::deserialize(buffer)?.message_payload),
+        },
         _ => {
             println!("failed to parse");
             return Err(anyhow::anyhow!("unsupported message type"));

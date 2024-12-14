@@ -256,8 +256,8 @@ mod tests {
                     .queue_request(
                         AnnounceShardRequest {
                             shard_type: ShardType::ReadShard,
-                            ip: (j+1) * 100,
-                            port: ((j+1) * 100) as u16,
+                            ip: (j + 1) * 100,
+                            port: ((j + 1) * 100) as u16,
                         },
                         local,
                     )
@@ -305,19 +305,36 @@ mod tests {
             assert_eq!(shared_peers_responses[i].peer_ips[0].0, i as u128);
             assert_eq!(shared_peers_responses[i].peer_ips[0].1, i as u16);
             for j in 0..(read_shards as usize) {
-                assert!(shared_peers_responses[i].peer_ips[1+j].0 >= 100 as u128);
-                assert!(shared_peers_responses[i].peer_ips[1+j].1 >= 100 as u16);
+                assert!(shared_peers_responses[i].peer_ips[1 + j].0 >= 100 as u128);
+                assert!(shared_peers_responses[i].peer_ips[1 + j].1 >= 100 as u16);
             }
         }
 
-        assert_eq!(client_shard_info_responses.len(), num_get_client_shard_info_requests as usize);
-        assert_eq!(client_shard_info_responses[0].num_write_shards, write_shards as u16);
-        assert_eq!(client_shard_info_responses[0].write_shard_info.len(), write_shards as usize);
+        assert_eq!(
+            client_shard_info_responses.len(),
+            num_get_client_shard_info_requests as usize
+        );
+        assert_eq!(
+            client_shard_info_responses[0].num_write_shards,
+            write_shards as u16
+        );
+        assert_eq!(
+            client_shard_info_responses[0].write_shard_info.len(),
+            write_shards as usize
+        );
         for i in 0..(write_shards as usize) {
-            assert_eq!(client_shard_info_responses[0].write_shard_info[i].0, i as u128);
-            assert_eq!(client_shard_info_responses[0].write_shard_info[i].1, i as u16);
+            assert_eq!(
+                client_shard_info_responses[0].write_shard_info[i].0,
+                i as u128
+            );
+            assert_eq!(
+                client_shard_info_responses[0].write_shard_info[i].1,
+                i as u16
+            );
         }
-        assert_eq!(client_shard_info_responses[0].read_shard_info.len(), write_shards as usize);
-
+        assert_eq!(
+            client_shard_info_responses[0].read_shard_info.len(),
+            write_shards as usize
+        );
     }
 }
