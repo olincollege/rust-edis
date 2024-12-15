@@ -16,8 +16,8 @@ mod tests {
     use std::process::Stdio;
     use tokio::time::{sleep, Duration};
 
-    #[serial]
     #[tokio::test]
+    #[serial]
     async fn test_basic_integration() -> Result<()> {
         let r: Result<()> = {
             test_setup::setup_test();
@@ -65,8 +65,8 @@ mod tests {
         r
     }
 
-    #[serial]
     #[tokio::test]
+    #[serial]
     async fn test_set_command_integration() -> Result<()> {
         // Start the info server
         let mut info_server = Command::cargo_bin("info")?;

@@ -113,8 +113,8 @@ mod test {
     use anyhow::{Ok, Result};
     use serial_test::serial;
 
-    #[serial]
     #[tokio::test]
+    #[serial]
     async fn test_example_router() -> Result<()> {
         test_setup::setup_test();
 

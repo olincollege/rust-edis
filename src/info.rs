@@ -34,9 +34,16 @@ use tokio::net::TcpListener;
 use utils::constants::MAIN_INSTANCE_IP_PORT;
 
 #[derive(Clone)]
+struct AnnounceInfo {
+    ip: u128,
+    port: u16,
+    announce_id: u128,
+}
+
+#[derive(Clone)]
 struct ReaderWriterBlock {
-    writer: Option<(u128, u16)>,
-    readers: Vec<(u128, u16)>,
+    writer: Option<AnnounceInfo>,
+    readers: Vec<AnnounceInfo>,
 }
 
 struct InfoRouter {
@@ -60,11 +67,37 @@ impl InfoRouter {
 impl RouterHandler for InfoRouter {
     /// Callback for handling new requests
     fn handle_announce_shard_request(&self, req: &AnnounceShardRequest) -> AnnounceShardResponse {
+        let mut reader_writers = self.reader_writers.lock().unwrap();
+
+        // check if message is reannounce of already announced shard
+        for block in reader_writers.iter_mut().enumerate() {
+            if let Some(writer) = &mut block.1.writer {
+                if writer.announce_id == req.shard_id {
+                    // update ip/port
+                    writer.ip = req.ip;
+                    writer.port = req.port;
+                    // already announced
+                    return AnnounceShardResponse {
+                        writer_number: block.0 as u16,
+                    };
+                }
+            }
+            for reader in block.1.readers.iter_mut() {
+                if reader.announce_id == req.shard_id {
+                    // update ip/port
+                    reader.ip = req.ip;
+                    reader.port = req.port;
+                    // already announced
+                    return AnnounceShardResponse {
+                        writer_number: block.0 as u16,
+                    };
+                }
+            }
+        }
+
         println!("handling announce shard request");
         match req.shard_type {
             ShardType::ReadShard => {
-                let mut reader_writers = self.reader_writers.lock().unwrap();
-
                 // find the writer with the smallest number of readers and attach there
                 let writer_idx = reader_writers
                     .iter()
@@ -72,14 +105,17 @@ impl RouterHandler for InfoRouter {
                     .min_by(|(_, a), (_, b)| a.readers.len().cmp(&b.readers.len()))
                     .unwrap()
                     .0;
-                reader_writers[writer_idx].readers.push((req.ip, req.port));
+                reader_writers[writer_idx].readers.push(AnnounceInfo {
+                    ip: req.ip,
+                    port: req.port,
+                    announce_id: req.shard_id,
+                });
 
                 AnnounceShardResponse {
                     writer_number: writer_idx as u16,
                 }
             }
             ShardType::WriteShard => {
-                let mut reader_writers = self.reader_writers.lock().unwrap();
                 let first_empty_idx = reader_writers
                     .iter()
                     .position(|block| block.writer.is_none());
@@ -90,7 +126,11 @@ impl RouterHandler for InfoRouter {
                         AnnounceShardResponse { writer_number: 0 }
                     }
                     Some(idx) => {
-                        reader_writers[idx].writer = Some((req.ip, req.port));
+                        reader_writers[idx].writer = Some(AnnounceInfo {
+                            ip: req.ip,
+                            port: req.port,
+                            announce_id: req.shard_id,
+                        });
                         AnnounceShardResponse {
                             writer_number: idx as u16,
                         }
@@ -110,13 +150,13 @@ impl RouterHandler for InfoRouter {
         let mut readers: Vec<(u128, u16)> = Vec::new();
 
         for writer_block in reader_writers.iter() {
-            match writer_block.writer {
+            match &writer_block.writer {
                 Some(writer) => {
-                    writers.push(writer);
+                    writers.push((writer.ip, writer.port));
                     let reader = writer_block.readers.choose(&mut rand::thread_rng());
                     match reader {
                         Some(reader) => {
-                            readers.push(reader.clone());
+                            readers.push((reader.ip, reader.port));
                         }
                         None => {
                             // error
@@ -157,11 +197,11 @@ impl RouterHandler for InfoRouter {
 
         if (req.writer_number as usize) < reader_writers.len() {
             let writer_block = &mut reader_writers[req.writer_number as usize];
-            match writer_block.writer {
+            match &writer_block.writer {
                 Some(writer) => {
-                    peer_ips.push(writer);
+                    peer_ips.push((writer.ip, writer.port));
                     for reader in &writer_block.readers {
-                        peer_ips.push(reader.clone());
+                        peer_ips.push((reader.ip, reader.port));
                     }
                 }
                 None => {}
@@ -236,8 +276,8 @@ mod tests {
     use super::*;
     use std::net::{Ipv6Addr, SocketAddrV6};
 
-    #[serial]
     #[tokio::test]
+    #[serial]
     async fn test_shard_attachment() {
         test_setup::setup_test();
 
