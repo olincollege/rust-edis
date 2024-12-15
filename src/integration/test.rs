@@ -13,6 +13,8 @@ mod tests {
     use crate::messages::responses::get_client_shard_info_response;
     use crate::utils::constants::MAIN_INSTANCE_IP_PORT;
     use crate::utils::test_client;
+    use std::process::Stdio;
+    use tokio::time::{sleep, Duration};
 
     #[serial]
     #[tokio::test]
@@ -61,5 +63,44 @@ mod tests {
 
         test_setup::test_teardown();
         r
+    }
+
+    #[tokio::test]
+    async fn test_set_command_integration() -> Result<()> {
+        // Start the info server
+        let mut info_server = Command::cargo_bin("info")?;
+        info_server
+            .arg("--write-shards=1")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()?;
+
+        // Start the write shard server
+        let mut write_server = Command::cargo_bin("write_shard")?;
+        write_server
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()?;
+
+        // Start the read shard server
+        let mut read_server = Command::cargo_bin("read_shard")?;
+        read_server
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()?;
+
+        // Allow servers to initialize
+        sleep(Duration::from_secs(5)).await;
+
+        // Test the client binary with a set command
+        let mut client = assert_cmd::Command::cargo_bin("client")?;
+
+        sleep(Duration::from_secs(1)).await;
+        client
+            .write_stdin("set test_key test_value\n")
+            .assert()
+            .stdout(predicate::str::contains("OK"));
+
+        Ok(())
     }
 }
