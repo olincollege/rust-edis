@@ -187,7 +187,6 @@ async fn main() -> Result<()> {
 
     println!("hi from read shard!");
 
-    /*/
     let client0 = read_shard_server.get_router_client();
     tokio::spawn(async move {
         println!("sending announce shard request from read");
@@ -204,7 +203,6 @@ async fn main() -> Result<()> {
             eprintln!("Failed to send AnnounceShardRequest: {:?}", e);
         }
     });
-    */
 
     let client1 = read_shard_server.get_router_client();
     tokio::spawn(async move {
@@ -230,7 +228,6 @@ async fn main() -> Result<()> {
         }
     });
 
-    /*
     let router_clone_2 = read_shard_router.clone();
     let client2 = read_shard_server.get_router_client();
     tokio::spawn({
@@ -257,9 +254,7 @@ async fn main() -> Result<()> {
             }
         }
     });
-    */
 
-    /*
     let client3 = read_shard_server.get_router_client();
     let client4 = read_shard_server.get_router_client();
     let router_clone_3 = read_shard_router.clone();
@@ -309,7 +304,6 @@ async fn main() -> Result<()> {
             }
         }
     });
-    */
 
     tokio::spawn(async move {
         println!("hi from read shard listen block");
