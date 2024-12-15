@@ -59,7 +59,7 @@ cargo build
 1. **Start the `info` instance:**
 
    ```bash
-   cargo run --bin info
+   cargo run --bin info -- --write-shards=1
    ```
 
 2. **Start a write shard:**
