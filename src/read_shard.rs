@@ -215,7 +215,7 @@ async fn main() -> Result<()> {
     let client2 = read_shard_server.get_router_client();
     tokio::spawn({
         async move {
-            let mut interval = time::interval(time::Duration::from_secs(3));
+            let mut interval = time::interval(time::Duration::from_millis(100));
             loop {
                 interval.tick().await;
 
