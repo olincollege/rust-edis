@@ -183,7 +183,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
             write_sockets
                 .insert_async(peer.clone(), write)
                 .await
-                .unwrap();
+                .map_err(|e| anyhow::anyhow!("Failed to insert write socket: {:?}", e))?;
 
             // bind the read half to a background task
             let handler = handler.clone();
@@ -422,7 +422,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
                             self.write_sockets
                                 .insert_async(addr.clone(), write)
                                 .await
-                                .unwrap();
+                                .map_err(|_e| anyhow::anyhow!("Failed to insert write socket"))?;
 
                             // bind the read half to a background task
                             let handler = self.handler.clone();
