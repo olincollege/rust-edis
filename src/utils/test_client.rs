@@ -32,6 +32,12 @@ pub struct TestRouterClient {
 }
 
 #[allow(unused)]
+impl Default for TestRouterClient {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TestRouterClient {
     pub fn new() -> Self {
         let query_version_responses = Arc::new(Mutex::new(Vec::new()));

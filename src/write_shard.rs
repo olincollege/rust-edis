@@ -183,7 +183,7 @@ async fn main() -> Result<()> {
 
             let announce_request = AnnounceShardRequest {
                 shard_type: ShardType::WriteShard,
-                shard_id: shard_id,
+                shard_id,
                 ip: writer_ip_port.ip().to_bits(),
                 port: writer_ip_port.port(),
             };

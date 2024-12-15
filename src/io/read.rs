@@ -28,7 +28,7 @@ pub async fn read_message(stream: &mut OwnedReadHalf) -> Result<Box<dyn MessageP
                 return Err(anyhow::anyhow!("connection closed"));
             }
             _ => {
-                match std::cmp::Ordering::from((buffer_idx + bytes_read).cmp(&total_length)) {
+                match (buffer_idx + bytes_read).cmp(&total_length) {
                     std::cmp::Ordering::Greater => {
                         return Err(anyhow::anyhow!("invalid message length"));
                     }

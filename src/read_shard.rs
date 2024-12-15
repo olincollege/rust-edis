@@ -54,17 +54,17 @@ impl RouterHandler for ReadShard {
         let key = String::from_utf8_lossy(&req.key).into_owned();
         let value = self.data.lock().unwrap().get(&key).cloned();
         if value.is_none() {
-            return ReadResponse {
+            ReadResponse {
                 error: 1,
                 key: req.key.clone(),
                 value: Vec::new(),
-            };
+            }
         } else {
-            return ReadResponse {
+            ReadResponse {
                 error: 0,
                 key: req.key.clone(),
                 value: value.unwrap().into_bytes(),
-            };
+            }
         }
     }
 
@@ -86,28 +86,26 @@ impl RouterHandler for ReadShard {
     fn handle_get_version_response(&self, res: &GetVersionResponse) {
         let mut current_version = self.current_version.lock().unwrap();
 
-        if res.error == 0 {
-            if res.version == *current_version + 1 {
-                *current_version = res.version;
-                let mut history = self.history.lock().unwrap();
-                let mut data = self.data.lock().unwrap();
-                data.insert(
-                    String::from_utf8_lossy(&res.key).into_owned(),
-                    String::from_utf8_lossy(&res.value).into_owned(),
-                );
-                println!(
-                    "-- caught up key: {}, value: {}",
-                    String::from_utf8_lossy(&res.key),
-                    String::from_utf8_lossy(&res.value)
-                );
-                history.push((
-                    String::from_utf8_lossy(&res.key).into_owned(),
-                    String::from_utf8_lossy(&res.value).into_owned(),
-                ));
+        if res.error == 0 && res.version == *current_version + 1 {
+            *current_version = res.version;
+            let mut history = self.history.lock().unwrap();
+            let mut data = self.data.lock().unwrap();
+            data.insert(
+                String::from_utf8_lossy(&res.key).into_owned(),
+                String::from_utf8_lossy(&res.value).into_owned(),
+            );
+            println!(
+                "-- caught up key: {}, value: {}",
+                String::from_utf8_lossy(&res.key),
+                String::from_utf8_lossy(&res.value)
+            );
+            history.push((
+                String::from_utf8_lossy(&res.key).into_owned(),
+                String::from_utf8_lossy(&res.value).into_owned(),
+            ));
 
-                let mut requested_version = self.requested_version.lock().unwrap();
-                *requested_version = *current_version;
-            }
+            let mut requested_version = self.requested_version.lock().unwrap();
+            *requested_version = *current_version;
         }
     }
 
@@ -174,6 +172,12 @@ impl RouterHandler for ReadShard {
     }
 }
 
+impl Default for ReadShard {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ReadShard {
     pub fn new() -> ReadShard {
         ReadShard {
@@ -232,7 +236,7 @@ async fn main() -> Result<()> {
                 println!("sending shared peers request (reader)");
 
                 let get_peers_request = GetSharedPeersRequest {
-                    writer_number: router_clone_2.writer_id.lock().unwrap().clone(),
+                    writer_number: *router_clone_2.writer_id.lock().unwrap(),
                 };
 
                 if let Err(e) = client2
@@ -267,8 +271,8 @@ async fn main() -> Result<()> {
                     peers[index]
                 };
 
-                if router_clone_3.requested_version.lock().unwrap().clone()
-                    <= router_clone_3.current_version.lock().unwrap().clone()
+                if *router_clone_3.requested_version.lock().unwrap()
+                    <= *router_clone_3.current_version.lock().unwrap()
                 {
                     let query_version_request = QueryVersionRequest {};
                     if let Err(e) = client3
@@ -280,8 +284,8 @@ async fn main() -> Result<()> {
                 }
 
                 let (current_version, requested_version) = {
-                    let curr_ver = router_clone_3.current_version.lock().unwrap().clone();
-                    let req_ver = router_clone_3.requested_version.lock().unwrap().clone();
+                    let curr_ver = *router_clone_3.current_version.lock().unwrap();
+                    let req_ver = *router_clone_3.requested_version.lock().unwrap();
                     (curr_ver, req_ver)
                 };
 
