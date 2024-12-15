@@ -141,8 +141,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
         res: M,
         peer: SocketAddrV6,
     ) -> Result<()> {
-        Self::create_write_socket_if_needed(write_sockets.clone(), handler.clone(), peer)
-            .await?;
+        Self::create_write_socket_if_needed(write_sockets.clone(), handler.clone(), peer).await?;
         let mut write_socket = write_sockets.get_async(&peer).await.unwrap();
         write_message(
             &mut write_socket,
