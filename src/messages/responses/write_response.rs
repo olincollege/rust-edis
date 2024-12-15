@@ -33,7 +33,7 @@ impl MessagePayload for WriteResponse {
     }
 
     fn deserialize(buffer: &[u8]) -> Result<Self> {
-        let error = *buffer.get(0).context("failed to get error")?;
+        let error = *buffer.first().context("failed to get error")?;
         Ok(WriteResponse { error })
     }
 }

@@ -93,7 +93,7 @@ impl<H: RouterHandler> RouterClient<H> {
         RouterBuilder::create_write_socket_if_needed(
             self.write_sockets.clone(),
             self.handler.clone(),
-            peer.clone(),
+            peer,
         )
         .await?;
         let mut write_socket = self.write_sockets.get_async(&peer).await.unwrap();
@@ -141,7 +141,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
         res: M,
         peer: SocketAddrV6,
     ) -> Result<()> {
-        Self::create_write_socket_if_needed(write_sockets.clone(), handler.clone(), peer.clone())
+        Self::create_write_socket_if_needed(write_sockets.clone(), handler.clone(), peer)
             .await?;
         let mut write_socket = write_sockets.get_async(&peer).await.unwrap();
         write_message(
@@ -168,12 +168,12 @@ impl<H: RouterHandler> RouterBuilder<H> {
         // check if peer is already connected
         if !write_sockets.contains_async(&peer).await {
             //println!("creating!");
-            let stream = TcpStream::connect(peer.clone()).await?;
+            let stream = TcpStream::connect(peer).await?;
             let (read, write) = stream.into_split();
 
             // push the write half to the map
             write_sockets
-                .insert_async(peer.clone(), write)
+                .insert_async(peer, write)
                 .await
                 .map_err(|e| anyhow::anyhow!("Failed to insert write socket: {:?}", e))?;
 
@@ -410,7 +410,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
 
                             // new peer discovered, add to our list of write sockets
                             self.write_sockets
-                                .insert_async(addr.clone(), write)
+                                .insert_async(addr, write)
                                 .await
                                 .map_err(|_e| anyhow::anyhow!("Failed to insert write socket"))?;
 

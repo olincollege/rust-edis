@@ -42,7 +42,7 @@ impl MessagePayload for ReadResponse {
     }
 
     fn deserialize(buffer: &[u8]) -> Result<Self> {
-        let error = *buffer.get(0).context("failed to get error")?;
+        let error = *buffer.first().context("failed to get error")?;
         let key_len = u16::from_le_bytes(
             buffer
                 .get(1..3)
