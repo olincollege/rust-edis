@@ -49,7 +49,10 @@ impl RouterHandler for ReadShard {
     }
 
     fn handle_read_request(&self, req: &ReadRequest) -> ReadResponse {
-        println!("handling request for key: {}", String::from_utf8_lossy(&req.key));
+        println!(
+            "handling request for key: {}",
+            String::from_utf8_lossy(&req.key)
+        );
         let key = String::from_utf8_lossy(&req.key).into_owned();
         let value = self.data.lock().unwrap().get(&key).cloned();
         if value.is_none() {
@@ -94,7 +97,11 @@ impl RouterHandler for ReadShard {
                     String::from_utf8_lossy(&res.key).into_owned(),
                     String::from_utf8_lossy(&res.value).into_owned(),
                 );
-                println!("-- caught up key: {}, value: {}", String::from_utf8_lossy(&res.key), String::from_utf8_lossy(&res.value));
+                println!(
+                    "-- caught up key: {}, value: {}",
+                    String::from_utf8_lossy(&res.key),
+                    String::from_utf8_lossy(&res.value)
+                );
                 history.push((
                     String::from_utf8_lossy(&res.key).into_owned(),
                     String::from_utf8_lossy(&res.value).into_owned(),
@@ -287,7 +294,10 @@ async fn main() -> Result<()> {
                         eprintln!("Failed to send GetVersionRequest: {:?}", e);
                     }
                 } else {
-                    println!("current version: {}, requested version: {}", current_version, requested_version);
+                    println!(
+                        "current version: {}, requested version: {}",
+                        current_version, requested_version
+                    );
                 }
             }
         }

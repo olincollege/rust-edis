@@ -65,7 +65,10 @@ impl RouterHandler for WriteShard {
         // Lock and update the version history
         let mut version_history = self.version_history.lock().unwrap();
         version_history.push((key.clone(), value.clone()));
-        println!("wrote key: {}, value: {}, version: {}", key, value, *current_version);
+        println!(
+            "wrote key: {}, value: {}, version: {}",
+            key, value, *current_version
+        );
         // Create a successful response
         WriteResponse { error: 0 }
     }

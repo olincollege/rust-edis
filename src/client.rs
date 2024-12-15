@@ -93,7 +93,10 @@ impl RouterHandler for Client {
 
     fn handle_read_response(&self, res: &ReadResponse) {
         if res.error == 1 {
-            println!("Read operation failed for key: {}", String::from_utf8_lossy(&res.key));
+            println!(
+                "Read operation failed for key: {}",
+                String::from_utf8_lossy(&res.key)
+            );
         }
         if res.value.is_empty() {
             println!("Key not found or value is empty.");
