@@ -51,7 +51,7 @@ impl MessagePayload for AnnounceShardRequest {
         let shard_type = ShardType::try_from(buffer[offset]).unwrap();
         offset += 1;
 
-        // Read message type (1 byte)
+        // Read message type (16 byte)
         let shard_id = u128::from_le_bytes(
             <[u8; 16]>::try_from(&buffer[offset..offset + 16]).context("failed to get shard id")?,
         );
