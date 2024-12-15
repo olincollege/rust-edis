@@ -1,0 +1,28 @@
+name: Run Tests
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches: 
+      - '*'
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        run: |
+          rustup update
+
+      - name: Run Tests
+        run: |
+          cargo test

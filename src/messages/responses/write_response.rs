@@ -9,6 +9,7 @@ pub enum WriteResponseError {
     Error = 1,
 }
 
+#[derive(Clone)]
 pub struct WriteResponse {
     pub error: u8,
 }

@@ -1,7 +1,22 @@
 use std::sync::{Arc, RwLock};
 
-use crate::messages::{requests::{announce_shard_request::AnnounceShardRequest, get_client_shard_info_request::GetClientShardInfoRequest, get_shared_peers_request::GetSharedPeersRequest, query_version_request::QueryVersionRequest, read_request::ReadRequest, write_request::WriteRequest}, responses::{announce_shard_response::AnnounceShardResponse, get_client_shard_info_response::GetClientShardInfoResponse, get_shared_peers_response::GetSharedPeersResponse, query_version_response::QueryVersionResponse, read_response::ReadResponse, write_response::WriteResponse}};
 use crate::io::router::{RouterBuilder, RouterHandler};
+use crate::messages::{
+    requests::{
+        announce_shard_request::AnnounceShardRequest,
+        get_client_shard_info_request::GetClientShardInfoRequest,
+        get_shared_peers_request::GetSharedPeersRequest,
+        query_version_request::QueryVersionRequest, read_request::ReadRequest,
+        write_request::WriteRequest,
+    },
+    responses::{
+        announce_shard_response::AnnounceShardResponse,
+        get_client_shard_info_response::GetClientShardInfoResponse,
+        get_shared_peers_response::GetSharedPeersResponse,
+        query_version_response::QueryVersionResponse, read_response::ReadResponse,
+        write_response::WriteResponse,
+    },
+};
 struct ExampleRouterHandler {
     debug_out: Arc<RwLock<Vec<Vec<u8>>>>,
 }
@@ -11,7 +26,10 @@ impl RouterHandler for ExampleRouterHandler {
         unimplemented!()
     }
 
-    fn handle_get_client_shard_info_request(&self, req: &GetClientShardInfoRequest) -> GetClientShardInfoResponse {
+    fn handle_get_client_shard_info_request(
+        &self,
+        req: &GetClientShardInfoRequest,
+    ) -> GetClientShardInfoResponse {
         unimplemented!()
     }
 
@@ -21,7 +39,9 @@ impl RouterHandler for ExampleRouterHandler {
 
     fn handle_read_request(&self, req: &ReadRequest) -> ReadResponse {
         ReadResponse {
-            value: vec![1,2,3,4],
+            value: vec![1, 2, 3, 4],
+            key: b"testkey".to_vec(),
+            error: 0,
         }
     }
 
@@ -29,7 +49,10 @@ impl RouterHandler for ExampleRouterHandler {
         unimplemented!()
     }
 
-    fn handle_get_shared_peers_request(&self, req: &GetSharedPeersRequest) -> GetSharedPeersResponse {
+    fn handle_get_shared_peers_request(
+        &self,
+        req: &GetSharedPeersRequest,
+    ) -> GetSharedPeersResponse {
         unimplemented!()
     }
 
@@ -57,24 +80,58 @@ impl RouterHandler for ExampleRouterHandler {
     fn handle_get_shared_peers_response(&self, res: &GetSharedPeersResponse) {
         unimplemented!()
     }
+
+    fn handle_get_version_request(
+        &self,
+        req: &crate::messages::requests::get_version_request::GetVersionRequest,
+    ) -> crate::messages::responses::get_version_response::GetVersionResponse {
+        unimplemented!()
+    }
+
+    fn handle_get_version_response(
+        &self,
+        res: &crate::messages::responses::get_version_response::GetVersionResponse,
+    ) {
+        unimplemented!()
+    }
 }
 
 mod test {
-    use std::sync::{Arc, RwLock};
+    use std::{
+        net::{Ipv6Addr, SocketAddrV6},
+        sync::{Arc, RwLock},
+    };
 
-    use anyhow::{Ok,Result};
-    use crate::{io::{router::RouterBuilder, router_example::ExampleRouterHandler}, messages::requests::{query_version_request::QueryVersionRequest, read_request::ReadRequest}};
+    use crate::{
+        io::{router::RouterBuilder, router_example::ExampleRouterHandler},
+        messages::requests::{
+            query_version_request::QueryVersionRequest, read_request::ReadRequest,
+        },
+    };
+    use anyhow::{Ok, Result};
+    use serial_test::serial;
 
-
+    #[serial]
     #[tokio::test]
     async fn test_example_router() -> Result<()> {
         let debug_out1: Arc<RwLock<Vec<Vec<u8>>>> = Arc::new(RwLock::new(Vec::new()));
         let debug_out2: Arc<RwLock<Vec<Vec<u8>>>> = Arc::new(RwLock::new(Vec::new()));
 
-        let router1 = RouterBuilder::new(ExampleRouterHandler { debug_out: debug_out1.clone() }, Some("127.0.0.1:8080".to_string()));
-        let router2: RouterBuilder<ExampleRouterHandler> = RouterBuilder::new(ExampleRouterHandler { debug_out: debug_out2.clone() }, Some("127.0.0.1:8081".to_string()));
+        let router1 = RouterBuilder::new(
+            ExampleRouterHandler {
+                debug_out: debug_out1.clone(),
+            },
+            Some(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8080, 0, 0)),
+        );
+        let mut router2: RouterBuilder<ExampleRouterHandler> = RouterBuilder::new(
+            ExampleRouterHandler {
+                debug_out: debug_out2.clone(),
+            },
+            Some(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8081, 0, 0)),
+        );
 
         tokio::spawn(async move {
+            router2.bind().await?;
             router2.listen().await?;
             Ok(())
         });
@@ -83,15 +140,23 @@ mod test {
         let router1_client = router1.get_router_client();
 
         for _ in 0..3 {
-            router1_client.queue_request::<ReadRequest>(ReadRequest {
-                key: "test".as_bytes().to_vec()
-            }, "127.0.0.1:8081".to_string()).await?;
+            router1_client
+                .queue_request::<ReadRequest>(
+                    ReadRequest {
+                        key: "test".as_bytes().to_vec(),
+                    },
+                    SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8081, 0, 0),
+                )
+                .await?;
             tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
         }
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
         let debug_out1 = debug_out1.read().unwrap();
-        assert_eq!(*debug_out1, vec![vec![1,2,3,4], vec![1,2,3,4], vec![1,2,3,4]]);
+        assert_eq!(
+            *debug_out1,
+            vec![vec![1, 2, 3, 4], vec![1, 2, 3, 4], vec![1, 2, 3, 4]]
+        );
         Ok(())
     }
 }
