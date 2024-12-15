@@ -68,6 +68,7 @@ impl TestRouterClient {
         }
     }
 
+    #[allow(unused)]
     pub fn get_client(&self) -> RouterClient<TestRouterClientHandler> {
         self.router.get_router_client()
     }

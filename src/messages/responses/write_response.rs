@@ -27,8 +27,7 @@ impl MessagePayload for WriteResponse {
     }
 
     fn serialize(&self) -> Result<Vec<u8>> {
-        let mut buffer = Vec::new();
-        buffer.push(self.error);
+        let buffer = vec![self.error];
         Ok(buffer)
     }
 
