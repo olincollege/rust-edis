@@ -132,6 +132,9 @@ impl RouterHandler for ReadShard {
 
     fn handle_get_version_request(&self, req: &GetVersionRequest) -> GetVersionResponse {
         let res = self.history.lock().unwrap();
+
+        println!("updating version: {}", req.version);
+
         if req.version <= *self.current_version.lock().unwrap() {
             GetVersionResponse {
                 error: 0,
@@ -218,6 +221,7 @@ async fn main() -> Result<()> {
             {
                 eprintln!("Failed to send AnnounceShardRequest: {:?}", e);
             }
+            break;
         }
     });
 
@@ -225,7 +229,7 @@ async fn main() -> Result<()> {
     let client2 = read_shard_server.get_router_client();
     tokio::spawn({
         async move {
-            let mut interval = time::interval(time::Duration::from_millis(100));
+            let mut interval = time::interval(time::Duration::from_secs(3));
             loop {
                 interval.tick().await;
 
@@ -244,12 +248,12 @@ async fn main() -> Result<()> {
                 {
                     eprintln!("Failed to send GetSharedPeersRequest: {:?}", e);
                 }
+                break;
             }
         }
     });
 
     let client3 = read_shard_server.get_router_client();
-    let client4 = read_shard_server.get_router_client();
     let router_clone_3 = read_shard_router.clone();
     tokio::spawn({
         async move {
@@ -268,12 +272,16 @@ async fn main() -> Result<()> {
                     peers[index]
                 };
 
-                let query_version_request = QueryVersionRequest {};
-                if let Err(e) = client3
-                    .queue_request::<QueryVersionRequest>(query_version_request, peer_ip_port)
-                    .await
+                if router_clone_3.requested_version.lock().unwrap().clone()
+                    <= router_clone_3.current_version.lock().unwrap().clone()
                 {
-                    eprintln!("Failed to send QueryVersionRequest: {:?}", e);
+                    let query_version_request = QueryVersionRequest {};
+                    if let Err(e) = client3
+                        .queue_request::<QueryVersionRequest>(query_version_request, peer_ip_port)
+                        .await
+                    {
+                        eprintln!("Failed to send QueryVersionRequest: {:?}", e);
+                    }
                 }
 
                 let (current_version, requested_version) = {
@@ -287,7 +295,7 @@ async fn main() -> Result<()> {
                         version: current_version + 1,
                     };
 
-                    if let Err(e) = client4
+                    if let Err(e) = client3
                         .queue_request::<GetVersionRequest>(get_version_request, peer_ip_port)
                         .await
                     {
