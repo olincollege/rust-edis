@@ -1,8 +1,5 @@
 use anyhow::Result;
-use tokio::{
-    io::AsyncReadExt,
-    net::tcp::OwnedReadHalf,
-};
+use tokio::{io::AsyncReadExt, net::tcp::OwnedReadHalf};
 
 use crate::messages::message::{bytes_as_message, MessagePayload};
 

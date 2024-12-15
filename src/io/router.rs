@@ -23,10 +23,7 @@ use scc::HashMap;
 use std::net::SocketAddr::{V4, V6};
 use std::net::{Ipv6Addr, SocketAddrV6};
 use std::sync::Arc;
-use tokio::net::{
-        tcp::OwnedReadHalf,
-        TcpListener, TcpStream,
-    };
+use tokio::net::{tcp::OwnedReadHalf, TcpListener, TcpStream};
 
 use super::read::read_message;
 

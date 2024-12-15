@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod test {
-    
-    use serial_test::serial;
-    use std::net::{Ipv6Addr, SocketAddrV6};
+
+    use crate::integration::test_setup;
     use crate::io::router::RouterHandler;
     use crate::messages::requests::announce_shard_request::AnnounceShardRequest;
     use crate::messages::requests::get_client_shard_info_request::GetClientShardInfoRequest;
@@ -16,31 +15,35 @@ mod test {
     use crate::messages::responses::read_response::ReadResponse;
     use crate::messages::responses::write_response::WriteResponse;
     use crate::{io::router::RouterBuilder, messages::requests::read_request::ReadRequest};
-    use crate::integration::test_setup;
     use anyhow::Result;
+    use serial_test::serial;
+    use std::net::{Ipv6Addr, SocketAddrV6};
     use std::sync::{Arc, RwLock};
 
     struct ExampleRouterHandler {
         debug_out: Arc<RwLock<Vec<Vec<u8>>>>,
     }
-    
+
     impl RouterHandler for ExampleRouterHandler {
         /// Callback for handling new requests
-        fn handle_announce_shard_request(&self, req: &AnnounceShardRequest) -> AnnounceShardResponse {
+        fn handle_announce_shard_request(
+            &self,
+            req: &AnnounceShardRequest,
+        ) -> AnnounceShardResponse {
             unimplemented!()
         }
-    
+
         fn handle_get_client_shard_info_request(
             &self,
             req: &GetClientShardInfoRequest,
         ) -> GetClientShardInfoResponse {
             unimplemented!()
         }
-    
+
         fn handle_query_version_request(&self, req: &QueryVersionRequest) -> QueryVersionResponse {
             unimplemented!()
         }
-    
+
         fn handle_read_request(&self, req: &ReadRequest) -> ReadResponse {
             ReadResponse {
                 value: vec![1, 2, 3, 4],
@@ -48,50 +51,50 @@ mod test {
                 error: 0,
             }
         }
-    
+
         fn handle_write_request(&self, req: &WriteRequest) -> WriteResponse {
             unimplemented!()
         }
-    
+
         fn handle_get_shared_peers_request(
             &self,
             req: &GetSharedPeersRequest,
         ) -> GetSharedPeersResponse {
             unimplemented!()
         }
-    
+
         /// Callbacks for handling responses to outbound requests
         fn handle_announce_shard_response(&self, res: &AnnounceShardResponse) {
             unimplemented!()
         }
-    
+
         fn handle_get_client_shard_info_response(&self, res: &GetClientShardInfoResponse) {
             unimplemented!()
         }
-    
+
         fn handle_query_version_response(&self, res: &QueryVersionResponse) {
             unimplemented!()
         }
-    
+
         fn handle_read_response(&self, res: &ReadResponse) {
             self.debug_out.write().unwrap().push(res.value.clone());
         }
-    
+
         fn handle_write_response(&self, res: &WriteResponse) {
             unimplemented!()
         }
-    
+
         fn handle_get_shared_peers_response(&self, res: &GetSharedPeersResponse) {
             unimplemented!()
         }
-    
+
         fn handle_get_version_request(
             &self,
             req: &crate::messages::requests::get_version_request::GetVersionRequest,
         ) -> crate::messages::responses::get_version_response::GetVersionResponse {
             unimplemented!()
         }
-    
+
         fn handle_get_version_response(
             &self,
             res: &crate::messages::responses::get_version_response::GetVersionResponse,

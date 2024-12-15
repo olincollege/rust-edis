@@ -40,9 +40,7 @@ struct Client {
 
 impl Client {
     fn new(shard_state: Arc<Mutex<ClientState>>) -> Self {
-        Client {
-            shard_state,
-        }
+        Client { shard_state }
     }
 }
 
@@ -163,7 +161,6 @@ fn hash_key_to_shard(key: &str, num_shards: usize) -> usize {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-
     // Create shared state
     let shard_state = Arc::new(Mutex::new(ClientState::default()));
     let client_router = Arc::new(RouterBuilder::new(

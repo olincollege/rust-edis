@@ -3,10 +3,9 @@ pub mod io;
 pub mod messages;
 pub mod utils;
 
-
 use crate::io::router::{RouterBuilder, RouterHandler};
 
-use clap::{Parser};
+use clap::Parser;
 use messages::requests::announce_shard_request::{AnnounceShardRequest, ShardType};
 use messages::requests::get_client_shard_info_request::GetClientShardInfoRequest;
 use messages::requests::get_shared_peers_request::GetSharedPeersRequest;
@@ -267,7 +266,7 @@ async fn main() -> Result<()> {
 mod tests {
     use rand::Rng;
     use serial_test::serial;
-    use utils::test_client::{TestRouterClient};
+    use utils::test_client::TestRouterClient;
 
     use super::*;
     use std::net::{Ipv6Addr, SocketAddrV6};
