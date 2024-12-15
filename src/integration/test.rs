@@ -99,13 +99,13 @@ mod tests {
 
         sleep(Duration::from_secs(1)).await;
         client1
-            .write_stdin("set test_key test_value\nexit\n")
+            .write_stdin("set test_key test_value\nwait\nexit\n")
             .assert()
             .stdout(predicate::str::contains("OK"));
 
         sleep(Duration::from_secs(1)).await;
         client2
-            .write_stdin("get test_key\nexit\n")
+            .write_stdin("get test_key\nwait\nexit\n")
             .assert()
             .stdout(predicate::str::contains("test_key"));
 

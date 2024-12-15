@@ -293,6 +293,10 @@ async fn main() -> Result<()> {
                 println!("Goodbye!");
                 break;
             }
+            // useful for testing
+            "wait" => {
+                tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+            }
             _ => {
                 println!("Unknown command. Available commands: set, get, exit");
             }
