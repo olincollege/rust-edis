@@ -183,7 +183,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
             write_sockets
                 .insert_async(peer.clone(), write)
                 .await
-                .unwrap();
+                .map_err(|e| anyhow::anyhow!("Failed to insert write socket: {:?}", e))?;
 
             // bind the read half to a background task
             let handler = handler.clone();
@@ -210,6 +210,8 @@ impl<H: RouterHandler> RouterBuilder<H> {
 
             match peer {
                 V6(peer) => {
+                    let msg_type = message.get_message_type();
+                    // println!("(router) handling new message of type {:?}", msg_type);
                     match message.is_request() {
                         true => {
                             match message.get_message_type() {
@@ -315,6 +317,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
                         }
                         false => match message.get_message_type() {
                             MessageType::AnnounceShard => {
+                                println!("(router): handling AnnounceShard message");
                                 let res = message
                                     .as_ref()
                                     .as_any()
@@ -419,7 +422,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
                             self.write_sockets
                                 .insert_async(addr.clone(), write)
                                 .await
-                                .unwrap();
+                                .map_err(|_e| anyhow::anyhow!("Failed to insert write socket"))?;
 
                             // bind the read half to a background task
                             let handler = self.handler.clone();

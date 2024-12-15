@@ -1,11 +1,14 @@
 use anyhow::Result;
 use io::write;
-use messages::requests::announce_shard_request::{AnnounceMessageType, ShardType};
+use messages::requests::announce_shard_request::ShardType;
+use rand::Rng;
 use std::collections::HashMap;
 use std::net::{Ipv6Addr, SocketAddrV6};
 use std::sync::{Arc, Mutex};
 use tokio::time;
+mod integration;
 mod messages;
+mod utils;
 use crate::messages::{
     requests::{
         announce_shard_request::AnnounceShardRequest,
@@ -63,7 +66,10 @@ impl RouterHandler for WriteShard {
         // Lock and update the version history
         let mut version_history = self.version_history.lock().unwrap();
         version_history.push((key.clone(), value.clone()));
-
+        println!(
+            "wrote key: {}, value: {}, version: {}",
+            key, value, *current_version
+        );
         // Create a successful response
         WriteResponse { error: 0 }
     }
@@ -95,6 +101,8 @@ impl RouterHandler for WriteShard {
     fn handle_query_version_request(&self, _req: &QueryVersionRequest) -> QueryVersionResponse {
         // Lock the current version to read its value
         let current_version = self.current_version.lock().unwrap();
+
+        println!("sent version: {}", *current_version);
 
         if *current_version > 0 {
             // Create the response with the latest version
@@ -132,7 +140,7 @@ impl RouterHandler for WriteShard {
 
     /// Callbacks for handling responses to outbound requests
     fn handle_announce_shard_response(&self, _res: &AnnounceShardResponse) {
-        unimplemented!()
+        // nothing to do
     }
 
     fn handle_get_client_shard_info_response(&self, _res: &GetClientShardInfoResponse) {
@@ -166,22 +174,7 @@ async fn main() -> Result<()> {
     let mut write_shard_server = RouterBuilder::new(write_shard_router, None);
     let writer_ip_port = write_shard_server.bind().await?;
 
-    let client0 = write_shard_server.get_router_client();
-    tokio::spawn(async move {
-        let announce_request = AnnounceShardRequest {
-            shard_type: ShardType::WriteShard,
-            message_type: AnnounceMessageType::NewAnnounce as u8,
-            ip: writer_ip_port.ip().to_bits(),
-            port: writer_ip_port.port(),
-        };
-
-        if let Err(e) = client0
-            .queue_request::<AnnounceShardRequest>(announce_request, MAIN_INSTANCE_IP_PORT)
-            .await
-        {
-            eprintln!("Failed to send AnnounceShardRequest: {:?}", e);
-        }
-    });
+    let shard_id: u128 = rand::thread_rng().gen();
 
     let client1 = write_shard_server.get_router_client();
     tokio::spawn(async move {
@@ -191,7 +184,7 @@ async fn main() -> Result<()> {
 
             let announce_request = AnnounceShardRequest {
                 shard_type: ShardType::WriteShard,
-                message_type: AnnounceMessageType::ReAnnounce as u8,
+                shard_id: shard_id,
                 ip: writer_ip_port.ip().to_bits(),
                 port: writer_ip_port.port(),
             };
@@ -209,7 +202,8 @@ async fn main() -> Result<()> {
         if let Err(e) = write_shard_server.listen().await {
             eprintln!("Server failed: {:?}", e);
         }
-    });
+    })
+    .await?;
 
     Ok(())
 }
