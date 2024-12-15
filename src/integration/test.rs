@@ -25,9 +25,17 @@ mod tests {
         let mut read_cmd = Command::cargo_bin("read_shard")?;
         let mut write_cmd = Command::cargo_bin("write_shard")?;
 
-        info_cmd.arg("--write-shards=1").spawn()?;
-        read_cmd.spawn()?;
-        write_cmd.spawn()?;
+        // the output is really noisy unless we need it for debugging
+        info_cmd.arg("--write-shards=1")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()?;
+        read_cmd.stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()?;
+        write_cmd.stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()?;
         tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
 
         // get the client shard into list
