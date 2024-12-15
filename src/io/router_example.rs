@@ -1,117 +1,107 @@
-use std::sync::{Arc, RwLock};
+#[cfg(test)]
+mod test {
 
-use crate::io::router::{RouterBuilder, RouterHandler};
-use crate::messages::{
-    requests::{
-        announce_shard_request::AnnounceShardRequest,
-        get_client_shard_info_request::GetClientShardInfoRequest,
-        get_shared_peers_request::GetSharedPeersRequest,
-        query_version_request::QueryVersionRequest, read_request::ReadRequest,
-        write_request::WriteRequest,
-    },
-    responses::{
-        announce_shard_response::AnnounceShardResponse,
-        get_client_shard_info_response::GetClientShardInfoResponse,
-        get_shared_peers_response::GetSharedPeersResponse,
-        query_version_response::QueryVersionResponse, read_response::ReadResponse,
-        write_response::WriteResponse,
-    },
-};
-struct ExampleRouterHandler {
-    debug_out: Arc<RwLock<Vec<Vec<u8>>>>,
-}
-impl RouterHandler for ExampleRouterHandler {
-    /// Callback for handling new requests
-    fn handle_announce_shard_request(&self, req: &AnnounceShardRequest) -> AnnounceShardResponse {
-        unimplemented!()
+    use crate::integration::test_setup;
+    use crate::io::router::RouterHandler;
+    use crate::messages::requests::announce_shard_request::AnnounceShardRequest;
+    use crate::messages::requests::get_client_shard_info_request::GetClientShardInfoRequest;
+    use crate::messages::requests::get_shared_peers_request::GetSharedPeersRequest;
+    use crate::messages::requests::query_version_request::QueryVersionRequest;
+    use crate::messages::requests::write_request::WriteRequest;
+    use crate::messages::responses::announce_shard_response::AnnounceShardResponse;
+    use crate::messages::responses::get_client_shard_info_response::GetClientShardInfoResponse;
+    use crate::messages::responses::get_shared_peers_response::GetSharedPeersResponse;
+    use crate::messages::responses::query_version_response::QueryVersionResponse;
+    use crate::messages::responses::read_response::ReadResponse;
+    use crate::messages::responses::write_response::WriteResponse;
+    use crate::{io::router::RouterBuilder, messages::requests::read_request::ReadRequest};
+    use anyhow::Result;
+    use serial_test::serial;
+    use std::net::{Ipv6Addr, SocketAddrV6};
+    use std::sync::{Arc, RwLock};
+
+    struct ExampleRouterHandler {
+        debug_out: Arc<RwLock<Vec<Vec<u8>>>>,
     }
 
-    fn handle_get_client_shard_info_request(
-        &self,
-        req: &GetClientShardInfoRequest,
-    ) -> GetClientShardInfoResponse {
-        unimplemented!()
-    }
+    impl RouterHandler for ExampleRouterHandler {
+        /// Callback for handling new requests
+        fn handle_announce_shard_request(
+            &self,
+            req: &AnnounceShardRequest,
+        ) -> AnnounceShardResponse {
+            unimplemented!()
+        }
 
-    fn handle_query_version_request(&self, req: &QueryVersionRequest) -> QueryVersionResponse {
-        unimplemented!()
-    }
+        fn handle_get_client_shard_info_request(
+            &self,
+            req: &GetClientShardInfoRequest,
+        ) -> GetClientShardInfoResponse {
+            unimplemented!()
+        }
 
-    fn handle_read_request(&self, req: &ReadRequest) -> ReadResponse {
-        ReadResponse {
-            value: vec![1, 2, 3, 4],
-            key: b"testkey".to_vec(),
-            error: 0,
+        fn handle_query_version_request(&self, req: &QueryVersionRequest) -> QueryVersionResponse {
+            unimplemented!()
+        }
+
+        fn handle_read_request(&self, req: &ReadRequest) -> ReadResponse {
+            ReadResponse {
+                value: vec![1, 2, 3, 4],
+                key: b"testkey".to_vec(),
+                error: 0,
+            }
+        }
+
+        fn handle_write_request(&self, req: &WriteRequest) -> WriteResponse {
+            unimplemented!()
+        }
+
+        fn handle_get_shared_peers_request(
+            &self,
+            req: &GetSharedPeersRequest,
+        ) -> GetSharedPeersResponse {
+            unimplemented!()
+        }
+
+        /// Callbacks for handling responses to outbound requests
+        fn handle_announce_shard_response(&self, res: &AnnounceShardResponse) {
+            unimplemented!()
+        }
+
+        fn handle_get_client_shard_info_response(&self, res: &GetClientShardInfoResponse) {
+            unimplemented!()
+        }
+
+        fn handle_query_version_response(&self, res: &QueryVersionResponse) {
+            unimplemented!()
+        }
+
+        fn handle_read_response(&self, res: &ReadResponse) {
+            self.debug_out.write().unwrap().push(res.value.clone());
+        }
+
+        fn handle_write_response(&self, res: &WriteResponse) {
+            unimplemented!()
+        }
+
+        fn handle_get_shared_peers_response(&self, res: &GetSharedPeersResponse) {
+            unimplemented!()
+        }
+
+        fn handle_get_version_request(
+            &self,
+            req: &crate::messages::requests::get_version_request::GetVersionRequest,
+        ) -> crate::messages::responses::get_version_response::GetVersionResponse {
+            unimplemented!()
+        }
+
+        fn handle_get_version_response(
+            &self,
+            res: &crate::messages::responses::get_version_response::GetVersionResponse,
+        ) {
+            unimplemented!()
         }
     }
-
-    fn handle_write_request(&self, req: &WriteRequest) -> WriteResponse {
-        unimplemented!()
-    }
-
-    fn handle_get_shared_peers_request(
-        &self,
-        req: &GetSharedPeersRequest,
-    ) -> GetSharedPeersResponse {
-        unimplemented!()
-    }
-
-    /// Callbacks for handling responses to outbound requests
-    fn handle_announce_shard_response(&self, res: &AnnounceShardResponse) {
-        unimplemented!()
-    }
-
-    fn handle_get_client_shard_info_response(&self, res: &GetClientShardInfoResponse) {
-        unimplemented!()
-    }
-
-    fn handle_query_version_response(&self, res: &QueryVersionResponse) {
-        unimplemented!()
-    }
-
-    fn handle_read_response(&self, res: &ReadResponse) {
-        self.debug_out.write().unwrap().push(res.value.clone());
-    }
-
-    fn handle_write_response(&self, res: &WriteResponse) {
-        unimplemented!()
-    }
-
-    fn handle_get_shared_peers_response(&self, res: &GetSharedPeersResponse) {
-        unimplemented!()
-    }
-
-    fn handle_get_version_request(
-        &self,
-        req: &crate::messages::requests::get_version_request::GetVersionRequest,
-    ) -> crate::messages::responses::get_version_response::GetVersionResponse {
-        unimplemented!()
-    }
-
-    fn handle_get_version_response(
-        &self,
-        res: &crate::messages::responses::get_version_response::GetVersionResponse,
-    ) {
-        unimplemented!()
-    }
-}
-
-mod test {
-    use super::*;
-    use std::{
-        net::{Ipv6Addr, SocketAddrV6},
-        sync::{Arc, RwLock},
-    };
-
-    use crate::{
-        integration::test_setup,
-        io::{router::RouterBuilder, router_example::ExampleRouterHandler},
-        messages::requests::{
-            query_version_request::QueryVersionRequest, read_request::ReadRequest,
-        },
-    };
-    use anyhow::{Ok, Result};
-    use serial_test::serial;
 
     #[tokio::test]
     #[serial]
@@ -137,7 +127,7 @@ mod test {
         tokio::spawn(async move {
             router2.bind().await?;
             router2.listen().await?;
-            Ok(())
+            anyhow::Ok(())
         });
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 

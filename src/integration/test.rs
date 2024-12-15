@@ -2,15 +2,15 @@
 mod tests {
     use anyhow::Result;
     use assert_cmd::prelude::*;
-    use port_killer::{kill, kill_by_pids};
+
     use predicates::prelude::*;
     use serial_test::serial;
-    use std::path::{absolute, Path};
+
     use std::process::Command;
 
     use crate::integration::test_setup;
     use crate::messages::requests::get_client_shard_info_request::GetClientShardInfoRequest;
-    use crate::messages::responses::get_client_shard_info_response;
+
     use crate::utils::constants::MAIN_INSTANCE_IP_PORT;
     use crate::utils::test_client;
     use std::process::Stdio;

@@ -1,7 +1,6 @@
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 
 use crate::io::router::{RouterBuilder, RouterClient, RouterHandler};
-use crate::messages::requests::query_version_request;
 use crate::messages::{
     requests::{
         announce_shard_request::AnnounceShardRequest,

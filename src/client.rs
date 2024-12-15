@@ -35,16 +35,12 @@ struct ClientState {
 
 #[derive(Debug, Clone)]
 struct Client {
-    server_address: String,
     shard_state: Arc<Mutex<ClientState>>,
 }
 
 impl Client {
-    fn new(server_address: String, shard_state: Arc<Mutex<ClientState>>) -> Self {
-        Client {
-            server_address,
-            shard_state,
-        }
+    fn new(shard_state: Arc<Mutex<ClientState>>) -> Self {
+        Client { shard_state }
     }
 }
 
@@ -165,12 +161,10 @@ fn hash_key_to_shard(key: &str, num_shards: usize) -> usize {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let main_info_server = "127.0.0.1:8080";
-
     // Create shared state
     let shard_state = Arc::new(Mutex::new(ClientState::default()));
     let client_router = Arc::new(RouterBuilder::new(
-        Client::new(main_info_server.to_string(), Arc::clone(&shard_state)),
+        Client::new(Arc::clone(&shard_state)),
         None,
     ));
 
