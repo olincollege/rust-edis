@@ -239,7 +239,6 @@ async fn main() -> Result<()> {
             }
         }
     });
-    /*
 
     let client3 = read_shard_server.get_router_client();
     let client4 = read_shard_server.get_router_client();
@@ -290,7 +289,6 @@ async fn main() -> Result<()> {
             }
         }
     });
-    */
 
     tokio::spawn(async move {
         println!("hi from read shard listen block");
