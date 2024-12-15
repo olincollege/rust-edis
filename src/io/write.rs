@@ -13,6 +13,6 @@ pub async fn write_message<T: MessagePayload>(
     let written = serialized_buf.len();
     stream.write_all(serialized_buf).await?;
     stream.flush().await?;
-    //println!("finished writing {written} bytes!");
+    println!("finished writing {written} bytes!");
     Ok(())
 }

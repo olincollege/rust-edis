@@ -208,8 +208,11 @@ impl<H: RouterHandler> RouterBuilder<H> {
             let message = read_message(&mut read).await?;
             let peer = read.peer_addr()?;
 
+
             match peer {
                 V6(peer) => {
+                    let msg_type = message.get_message_type();
+                    println!("(router) handling new message of type {:?}", msg_type);
                     match message.is_request() {
                         true => {
                             match message.get_message_type() {
@@ -315,6 +318,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
                         }
                         false => match message.get_message_type() {
                             MessageType::AnnounceShard => {
+                                println!("(router): handling AnnounceShard message");
                                 let res = message
                                     .as_ref()
                                     .as_any()

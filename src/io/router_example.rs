@@ -97,23 +97,26 @@ impl RouterHandler for ExampleRouterHandler {
 }
 
 mod test {
+    use super::*;
     use std::{
         net::{Ipv6Addr, SocketAddrV6},
         sync::{Arc, RwLock},
     };
 
     use crate::{
-        io::{router::RouterBuilder, router_example::ExampleRouterHandler},
-        messages::requests::{
+        io::{router::RouterBuilder, router_example::ExampleRouterHandler}, messages::requests::{
             query_version_request::QueryVersionRequest, read_request::ReadRequest,
-        },
+        } 
     };
     use anyhow::{Ok, Result};
     use serial_test::serial;
 
+
     #[serial]
     #[tokio::test]
     async fn test_example_router() -> Result<()> {
+        test_setup::setup_test();
+
         let debug_out1: Arc<RwLock<Vec<Vec<u8>>>> = Arc::new(RwLock::new(Vec::new()));
         let debug_out2: Arc<RwLock<Vec<Vec<u8>>>> = Arc::new(RwLock::new(Vec::new()));
 

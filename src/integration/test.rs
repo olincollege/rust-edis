@@ -11,16 +11,16 @@ mod tests {
 
     use crate::messages::requests::get_client_shard_info_request::GetClientShardInfoRequest;
     use crate::messages::responses::get_client_shard_info_response;
+    use crate::integration::test_setup;
     use crate::utils::constants::MAIN_INSTANCE_IP_PORT;
     use crate::utils::test_client;
 
     #[serial]
     #[tokio::test]
     async fn test_basic_integration() -> Result<()> {
-        // kill any dangling process
-        kill(8080)?;
+        test_setup::setup_test();
 
-        // start everything 
+        // start everything
         let mut info_cmd = Command::cargo_bin("info")?;
         let mut read_cmd = Command::cargo_bin("read_shard")?;
         let mut write_cmd = Command::cargo_bin("write_shard")?;
@@ -38,6 +38,8 @@ mod tests {
         let client_shard_info_responses = test_client.get_client_shard_info_responses.lock().unwrap();
         assert_eq!(client_shard_info_responses.len(), 1);
         assert_eq!(client_shard_info_responses[0].num_write_shards, 1);
+        assert_eq!(client_shard_info_responses[0].write_shard_info.len(), 1);
+        assert_eq!(client_shard_info_responses[0].read_shard_info.len(), 1);
 
         Ok(())
     }

@@ -1,7 +1,7 @@
 pub mod io;
 pub mod messages;
 pub mod utils;
-pub mod test;
+pub mod integration;
 
 use std::mem::uninitialized;
 
@@ -120,6 +120,7 @@ impl RouterHandler for InfoRouter {
                         }
                         None => {
                             // error
+                            println!("(error) on client shard info req 1");
                             return GetClientShardInfoResponse {
                                 num_write_shards: 0,
                                 read_shard_info: Vec::new(),
@@ -130,6 +131,7 @@ impl RouterHandler for InfoRouter {
                 }
                 None => {
                     // error
+                    println!("(error) on client shard info req 2");
                     return GetClientShardInfoResponse {
                         num_write_shards: 0,
                         read_shard_info: Vec::new(),
@@ -227,6 +229,7 @@ async fn main() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use messages::requests::announce_shard_request::AnnounceMessageType;
+    use rust_edis::integration::test_setup; 
     use serial_test::serial;
     use utils::test_client::{self, TestRouterClient};
 
@@ -236,6 +239,8 @@ mod tests {
     #[serial]
     #[tokio::test]
     async fn test_shard_attachment() {
+        test_setup::setup_test();
+
         let test_router_client = TestRouterClient::new();
         let test_client = test_router_client.get_client();
 

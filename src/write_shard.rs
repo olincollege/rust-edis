@@ -6,6 +6,7 @@ use std::net::{Ipv6Addr, SocketAddrV6};
 use std::sync::{Arc, Mutex};
 use tokio::time;
 mod messages;
+mod integration;
 use crate::messages::{
     requests::{
         announce_shard_request::AnnounceShardRequest,
@@ -132,7 +133,7 @@ impl RouterHandler for WriteShard {
 
     /// Callbacks for handling responses to outbound requests
     fn handle_announce_shard_response(&self, _res: &AnnounceShardResponse) {
-        unimplemented!()
+        // nothing to do
     }
 
     fn handle_get_client_shard_info_response(&self, _res: &GetClientShardInfoResponse) {
@@ -209,7 +210,7 @@ async fn main() -> Result<()> {
         if let Err(e) = write_shard_server.listen().await {
             eprintln!("Server failed: {:?}", e);
         }
-    });
+    }).await?;
 
     Ok(())
 }

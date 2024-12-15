@@ -13,6 +13,7 @@ use tokio::time;
 mod io;
 mod messages;
 mod utils;
+mod integration;
 use crate::messages::{
     requests::{
         announce_shard_request::{AnnounceMessageType, AnnounceShardRequest},
@@ -185,6 +186,9 @@ async fn main() -> Result<()> {
     let read_shard_router = read_shard_server.get_handler_arc();
     let reader_ip_port = read_shard_server.bind().await?;
 
+    println!("hi from read shard!");
+
+    /*/
     let client0 = read_shard_server.get_router_client();
     tokio::spawn(async move {
         println!("sending announce shard request from read");
@@ -201,9 +205,11 @@ async fn main() -> Result<()> {
             eprintln!("Failed to send AnnounceShardRequest: {:?}", e);
         }
     });
+    */
 
     let client1 = read_shard_server.get_router_client();
     tokio::spawn(async move {
+        println!("hi from read shard loop");
         let mut interval = time::interval(time::Duration::from_secs(3));
         loop {
             interval.tick().await;
@@ -225,6 +231,7 @@ async fn main() -> Result<()> {
         }
     });
 
+    /*
     let router_clone_2 = read_shard_router.clone();
     let client2 = read_shard_server.get_router_client();
     tokio::spawn({
@@ -251,7 +258,9 @@ async fn main() -> Result<()> {
             }
         }
     });
+    */
 
+    /*
     let client3 = read_shard_server.get_router_client();
     let client4 = read_shard_server.get_router_client();
     let router_clone_3 = read_shard_router.clone();
@@ -301,12 +310,14 @@ async fn main() -> Result<()> {
             }
         }
     });
+    */
 
     tokio::spawn(async move {
+        println!("hi from read shard listen block");
         if let Err(e) = read_shard_server.listen().await {
             eprintln!("Server failed: {:?}", e);
         }
-    });
+    }).await?;
 
     Ok(())
 }
