@@ -16,11 +16,9 @@ mod messages;
 mod utils;
 use crate::messages::{
     requests::{
-        announce_shard_request::{AnnounceShardRequest},
-        get_shared_peers_request::GetSharedPeersRequest,
-        get_version_request::GetVersionRequest,
-        query_version_request::QueryVersionRequest,
-        read_request::ReadRequest,
+        announce_shard_request::AnnounceShardRequest,
+        get_shared_peers_request::GetSharedPeersRequest, get_version_request::GetVersionRequest,
+        query_version_request::QueryVersionRequest, read_request::ReadRequest,
     },
     responses::{
         announce_shard_response::AnnounceShardResponse,
