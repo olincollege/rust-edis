@@ -49,7 +49,10 @@ impl RouterHandler for ReadShard {
     }
 
     fn handle_read_request(&self, req: &ReadRequest) -> ReadResponse {
-        println!("handling request for key: {}", String::from_utf8_lossy(&req.key));
+        println!(
+            "handling request for key: {}",
+            String::from_utf8_lossy(&req.key)
+        );
         let key = String::from_utf8_lossy(&req.key).into_owned();
         let value = self.data.lock().unwrap().get(&key).cloned();
         if value.is_none() {
@@ -94,7 +97,11 @@ impl RouterHandler for ReadShard {
                     String::from_utf8_lossy(&res.key).into_owned(),
                     String::from_utf8_lossy(&res.value).into_owned(),
                 );
-                println!("-- caught up key: {}, value: {}", String::from_utf8_lossy(&res.key), String::from_utf8_lossy(&res.value));
+                println!(
+                    "-- caught up key: {}, value: {}",
+                    String::from_utf8_lossy(&res.key),
+                    String::from_utf8_lossy(&res.value)
+                );
                 history.push((
                     String::from_utf8_lossy(&res.key).into_owned(),
                     String::from_utf8_lossy(&res.value).into_owned(),
@@ -125,6 +132,9 @@ impl RouterHandler for ReadShard {
 
     fn handle_get_version_request(&self, req: &GetVersionRequest) -> GetVersionResponse {
         let res = self.history.lock().unwrap();
+
+        println!("updating version: {}", req.version);
+
         if req.version <= *self.current_version.lock().unwrap() {
             GetVersionResponse {
                 error: 0,
@@ -211,6 +221,7 @@ async fn main() -> Result<()> {
             {
                 eprintln!("Failed to send AnnounceShardRequest: {:?}", e);
             }
+            break;
         }
     });
 
@@ -237,6 +248,7 @@ async fn main() -> Result<()> {
                 {
                     eprintln!("Failed to send GetSharedPeersRequest: {:?}", e);
                 }
+                break;
             }
         }
     });
@@ -246,7 +258,7 @@ async fn main() -> Result<()> {
     let router_clone_3 = read_shard_router.clone();
     tokio::spawn({
         async move {
-            let mut interval = time::interval(time::Duration::from_secs(1));
+            let mut interval = time::interval(time::Duration::from_secs(3));
             loop {
                 interval.tick().await;
 
@@ -261,12 +273,16 @@ async fn main() -> Result<()> {
                     peers[index]
                 };
 
-                let query_version_request = QueryVersionRequest {};
-                if let Err(e) = client3
-                    .queue_request::<QueryVersionRequest>(query_version_request, peer_ip_port)
-                    .await
+                if router_clone_3.requested_version.lock().unwrap().clone()
+                    == router_clone_3.current_version.lock().unwrap().clone()
                 {
-                    eprintln!("Failed to send QueryVersionRequest: {:?}", e);
+                    let query_version_request = QueryVersionRequest {};
+                    if let Err(e) = client3
+                        .queue_request::<QueryVersionRequest>(query_version_request, peer_ip_port)
+                        .await
+                    {
+                        eprintln!("Failed to send QueryVersionRequest: {:?}", e);
+                    }
                 }
 
                 let (current_version, requested_version) = {
@@ -280,14 +296,17 @@ async fn main() -> Result<()> {
                         version: current_version + 1,
                     };
 
-                    if let Err(e) = client4
+                    if let Err(e) = client3
                         .queue_request::<GetVersionRequest>(get_version_request, peer_ip_port)
                         .await
                     {
                         eprintln!("Failed to send GetVersionRequest: {:?}", e);
                     }
                 } else {
-                    println!("current version: {}, requested version: {}", current_version, requested_version);
+                    println!(
+                        "current version: {}, requested version: {}",
+                        current_version, requested_version
+                    );
                 }
             }
         }
