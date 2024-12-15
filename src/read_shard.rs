@@ -213,6 +213,7 @@ async fn main() -> Result<()> {
         }
     });
 
+    /*
     let router_clone_2 = read_shard_router.clone();
     let client2 = read_shard_server.get_router_client();
     tokio::spawn({
@@ -289,6 +290,7 @@ async fn main() -> Result<()> {
             }
         }
     });
+    */
 
     tokio::spawn(async move {
         println!("hi from read shard listen block");
