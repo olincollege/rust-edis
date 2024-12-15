@@ -198,7 +198,7 @@ async fn main() -> Result<()> {
 
     println!("hi from read shard!");
 
-    let client0 = read_shard_server.get_router_client();
+    let shard_id = rand::thread_rng().gen();
 
     let client1 = read_shard_server.get_router_client();
     tokio::spawn(async move {
@@ -209,7 +209,7 @@ async fn main() -> Result<()> {
 
             let announce_request = AnnounceShardRequest {
                 shard_type: ShardType::ReadShard,
-                message_type: AnnounceMessageType::ReAnnounce as u8,
+                shard_id,
                 ip: reader_ip_port.ip().to_bits(),
                 port: reader_ip_port.port(),
             };
@@ -254,11 +254,10 @@ async fn main() -> Result<()> {
     });
 
     let client3 = read_shard_server.get_router_client();
-    let client4 = read_shard_server.get_router_client();
     let router_clone_3 = read_shard_router.clone();
     tokio::spawn({
         async move {
-            let mut interval = time::interval(time::Duration::from_secs(3));
+            let mut interval = time::interval(time::Duration::from_secs(1));
             loop {
                 interval.tick().await;
 
@@ -274,7 +273,7 @@ async fn main() -> Result<()> {
                 };
 
                 if router_clone_3.requested_version.lock().unwrap().clone()
-                    == router_clone_3.current_version.lock().unwrap().clone()
+                    <= router_clone_3.current_version.lock().unwrap().clone()
                 {
                     let query_version_request = QueryVersionRequest {};
                     if let Err(e) = client3

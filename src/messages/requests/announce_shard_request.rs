@@ -18,14 +18,14 @@ pub enum AnnounceMessageType {
 
 pub struct AnnounceShardRequest {
     pub shard_type: ShardType,
-    pub message_type: u8,
+    pub shard_id: u128,
     pub ip: u128,
     pub port: u16,
 }
 
 /// Layout of the AnnounceShardRequest
-/// | 1 byte     | 1 byte       | 16 bytes | 2 bytes |
-/// | Shard Type | message type |   IP     |   port  |
+/// | 1 byte     | 16 bytes  | 16 bytes | 2 bytes |
+/// | Shard Type | shard ID  |   IP     |   port  |
 impl MessagePayload for AnnounceShardRequest {
     fn is_request(&self) -> bool {
         true
@@ -40,8 +40,8 @@ impl MessagePayload for AnnounceShardRequest {
         // Add shard type (1 byte)
         buffer.push(self.shard_type.into());
 
-        // Add message type (1 byte)
-        buffer.push(self.message_type);
+        // Add message type (16 byte)
+        buffer.extend_from_slice(&self.shard_id.to_le_bytes());
 
         // Add IP (16 bytes)
         buffer.extend_from_slice(&self.ip.to_le_bytes());
@@ -58,9 +58,11 @@ impl MessagePayload for AnnounceShardRequest {
         let shard_type = ShardType::try_from(buffer[offset]).unwrap();
         offset += 1;
 
-        // Read message type (1 byte)
-        let message_type = buffer[offset];
-        offset += 1;
+        // Read message type (16 byte)
+        let shard_id = u128::from_le_bytes(
+            <[u8; 16]>::try_from(&buffer[offset..offset + 16]).context("failed to get shard id")?,
+        );
+        offset += 16;
 
         // Read IP (16 bytes)
         let ip = u128::from_le_bytes(
@@ -75,7 +77,7 @@ impl MessagePayload for AnnounceShardRequest {
 
         Ok(AnnounceShardRequest {
             shard_type,
-            message_type,
+            shard_id,
             ip,
             port,
         })
@@ -90,7 +92,7 @@ mod tests {
     #[test]
     fn test_roundtrip_basic() {
         let original = AnnounceShardRequest {
-            message_type: AnnounceMessageType::NewAnnounce as u8,
+            shard_id: 0,
             shard_type: ShardType::WriteShard,
             ip: 1,
             port: 8080,
@@ -109,7 +111,7 @@ mod tests {
             let ip: u128 = rng.gen();
             let port: u16 = rng.gen();
             let original = AnnounceShardRequest {
-                message_type: AnnounceMessageType::NewAnnounce as u8,
+                shard_id: 0,
                 shard_type: ShardType::WriteShard,
                 ip,
                 port,
