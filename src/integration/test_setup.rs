@@ -1,4 +1,5 @@
 // kill any dangling info shard processes for test setup
+#[cfg(test)]
 pub fn setup_test() {
     let system = sysinfo::System::new_all();
 
@@ -14,6 +15,7 @@ pub fn setup_test() {
     }
 }
 
+#[cfg(test)]
 pub fn test_teardown() {
     let system = sysinfo::System::new_all();
 

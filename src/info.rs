@@ -3,11 +3,10 @@ pub mod io;
 pub mod messages;
 pub mod utils;
 
-use std::mem::uninitialized;
 
 use crate::io::router::{RouterBuilder, RouterHandler};
 
-use clap::{Args, Parser};
+use clap::{Parser};
 use messages::requests::announce_shard_request::{AnnounceShardRequest, ShardType};
 use messages::requests::get_client_shard_info_request::GetClientShardInfoRequest;
 use messages::requests::get_shared_peers_request::GetSharedPeersRequest;
@@ -29,8 +28,6 @@ use messages::responses::write_response::WriteResponse;
 use anyhow::Result;
 use rand::seq::SliceRandom;
 use std::sync::{Arc, Mutex};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpListener;
 use utils::constants::MAIN_INSTANCE_IP_PORT;
 
 #[derive(Clone)]
@@ -269,7 +266,6 @@ async fn main() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use rand::Rng;
-    use rust_edis::integration::test_setup;
     use serial_test::serial;
     use utils::test_client::{self, TestRouterClient};
 
@@ -279,7 +275,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_shard_attachment() {
-        test_setup::setup_test();
+        crate::integration::test_setup::setup_test();
 
         let test_router_client = TestRouterClient::new();
         let test_client = test_router_client.get_client();
