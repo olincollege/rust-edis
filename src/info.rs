@@ -116,7 +116,6 @@ impl RouterHandler for InfoRouter {
                 }
             }
             ShardType::WriteShard => {
-                let mut reader_writers = self.reader_writers.lock().unwrap();
                 let first_empty_idx = reader_writers
                     .iter()
                     .position(|block| block.writer.is_none());
@@ -292,8 +291,8 @@ mod tests {
         let mut info_router = RouterBuilder::new(InfoRouter::new(2), Some(local));
 
         tokio::spawn(async move {
-            info_router.bind().await;
-            info_router.listen().await;
+            info_router.bind().await.unwrap();
+            info_router.listen().await.unwrap();
         });
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
