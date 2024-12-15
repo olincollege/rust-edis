@@ -27,6 +27,8 @@ use messages::responses::write_response::WriteResponse;
 use anyhow::Result;
 use rand::seq::SliceRandom;
 use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
+use tokio::time;
 use utils::constants::MAIN_INSTANCE_IP_PORT;
 
 #[derive(Clone)]
@@ -34,6 +36,7 @@ struct AnnounceInfo {
     ip: u128,
     port: u16,
     announce_id: u128,
+    timestamp: SystemTime,
 }
 
 #[derive(Clone)]
@@ -105,6 +108,7 @@ impl RouterHandler for InfoRouter {
                     ip: req.ip,
                     port: req.port,
                     announce_id: req.shard_id,
+                    timestamp: SystemTime::now(),
                 });
 
                 AnnounceShardResponse {
@@ -126,6 +130,7 @@ impl RouterHandler for InfoRouter {
                             ip: req.ip,
                             port: req.port,
                             announce_id: req.shard_id,
+                            timestamp: SystemTime::now(),
                         });
                         AnnounceShardResponse {
                             writer_number: idx as u16,
@@ -251,6 +256,26 @@ async fn main() -> Result<()> {
     let args = InfoArgs::parse();
     let info_router = InfoRouter::new(args.write_shards);
     let mut info_server = RouterBuilder::new(info_router, Some(MAIN_INSTANCE_IP_PORT));
+    let info_router = info_server.get_handler_arc();
+
+    tokio::spawn(async move {
+        let mut interval = time::interval(time::Duration::from_millis(100));
+        loop {
+            interval.tick().await;
+            let mut reader_writers = info_router.reader_writers.lock().unwrap();
+
+            reader_writers.iter_mut().for_each(|block| {
+                block.readers.retain(|reader| {
+                    reader
+                        .timestamp
+                        .elapsed()
+                        .map(|elapsed| elapsed.as_secs() < 2)
+                        .unwrap_or(false)
+                });
+            });
+        }
+    });
+
     tokio::spawn(async move {
         info_server.bind().await?;
         info_server.listen().await?;
