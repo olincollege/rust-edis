@@ -193,18 +193,15 @@ impl RouterHandler for InfoRouter {
 
         if (req.writer_number as usize) < reader_writers.len() {
             let writer_block = &mut reader_writers[req.writer_number as usize];
-            match &writer_block.writer {
-                Some(writer) => {
-                    peer_ips.push((writer.ip, writer.port));
-                    for reader in &writer_block.readers {
-                        peer_ips.push((reader.ip, reader.port));
-                    }
+            if let Some(writer) = &writer_block.writer {
+                peer_ips.push((writer.ip, writer.port));
+                for reader in &writer_block.readers {
+                    peer_ips.push((reader.ip, reader.port));
                 }
-                None => {}
             }
         }
 
-        GetSharedPeersResponse { peer_ips: peer_ips }
+        GetSharedPeersResponse { peer_ips }
     }
 
     // Unused requests
