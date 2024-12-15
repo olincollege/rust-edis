@@ -221,7 +221,6 @@ async fn main() -> Result<()> {
             {
                 eprintln!("Failed to send AnnounceShardRequest: {:?}", e);
             }
-            break;
         }
     });
 
@@ -248,7 +247,6 @@ async fn main() -> Result<()> {
                 {
                     eprintln!("Failed to send GetSharedPeersRequest: {:?}", e);
                 }
-                break;
             }
         }
     });
