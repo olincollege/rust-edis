@@ -58,7 +58,7 @@ impl RouterHandler for Client {
     }
 
     fn handle_get_client_shard_info_response(&self, res: &GetClientShardInfoResponse) {
-        println!("Received shard information from main info server:");
+        // println!("Received shard information from main info server:");
 
         let num_write_shards = res.num_write_shards as usize;
         let write_shard_info: Vec<SocketAddrV6> = res
@@ -73,9 +73,9 @@ impl RouterHandler for Client {
             .map(|(ip, port)| SocketAddrV6::new(Ipv6Addr::from(*ip), *port, 0, 0))
             .collect();
 
-        println!("Number of write shards: {}", num_write_shards);
-        println!("Write Shards: {:?}", write_shard_info);
-        println!("Read Shards: {:?}", read_shard_info);
+        // println!("Number of write shards: {}", num_write_shards);
+        // println!("Write Shards: {:?}", write_shard_info);
+        // println!("Read Shards: {:?}", read_shard_info);
 
         // Update the client state
         let mut shard_state = self.shard_state.lock().unwrap();
@@ -92,6 +92,9 @@ impl RouterHandler for Client {
     }
 
     fn handle_read_response(&self, res: &ReadResponse) {
+        if res.error == 1 {
+            println!("Read operation failed for key: {}", String::from_utf8_lossy(&res.key));
+        }
         if res.value.is_empty() {
             println!("Key not found or value is empty.");
         } else {
@@ -170,6 +173,7 @@ async fn main() -> Result<()> {
 
     let main_info_server = SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8080, 0, 0);
 
+    // Spawn a task to continuously request shard info
     let client_router_clone = Arc::clone(&client_router);
     tokio::spawn(async move {
         loop {
@@ -189,6 +193,20 @@ async fn main() -> Result<()> {
         "Connected to WriteShard database through Main Info Server at {}",
         main_info_server
     );
+    println!("Requesting shard info from the server...");
+
+    // Wait until we have shard information
+    loop {
+        {
+            let state = shard_state.lock().unwrap();
+            if state.num_write_shards > 0 {
+                break;
+            }
+        }
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+    }
+
+    println!("Shard information received. Now ready for commands!");
     println!("Available commands: set <key> <value>, get <key>, exit");
 
     loop {
@@ -207,14 +225,17 @@ async fn main() -> Result<()> {
         match command.as_str() {
             "set" => {
                 if let (Some(key), Some(value)) = (key, value) {
-                    // Lock the shard state to read configuration
                     let shard_index;
                     let target;
                     {
                         let shard_state_lock = shard_state.lock().unwrap();
+                        if shard_state_lock.num_write_shards == 0 {
+                            println!("No write shards available");
+                            continue;
+                        }
                         shard_index = hash_key_to_shard(key, shard_state_lock.num_write_shards);
                         target = shard_state_lock.write_shard_info[shard_index];
-                    } // Lock is released here when `shard_state_lock` goes out of scope
+                    }
 
                     let request = WriteRequest {
                         key: key.as_bytes().to_vec(),
@@ -240,6 +261,10 @@ async fn main() -> Result<()> {
                     let target;
                     {
                         let shard_state_lock = shard_state.lock().unwrap();
+                        if shard_state_lock.num_write_shards == 0 {
+                            println!("No write shards available");
+                            continue;
+                        }
                         shard_index = hash_key_to_shard(key, shard_state_lock.num_write_shards);
                         target = shard_state_lock.read_shard_info[shard_index];
                     }
@@ -255,9 +280,7 @@ async fn main() -> Result<()> {
                     {
                         eprintln!("Failed to queue read request: {}", err);
                     } else {
-                        println!(
-                            "Request queued successfully. Check the server logs for the response."
-                        );
+                        println!("Request queued successfully.");
                     }
                 } else {
                     println!("Usage: get <key>");

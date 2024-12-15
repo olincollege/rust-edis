@@ -43,13 +43,13 @@ pub struct ReadShard {
 
 impl RouterHandler for ReadShard {
     fn handle_announce_shard_response(&self, res: &AnnounceShardResponse) {
-        println!("handing announce shard response (reader)");
         let writer_number = res.writer_number;
         let mut writer_id = self.writer_id.lock().unwrap();
         *writer_id = writer_number;
     }
 
     fn handle_read_request(&self, req: &ReadRequest) -> ReadResponse {
+        println!("handling request for key: {}", String::from_utf8_lossy(&req.key));
         let key = String::from_utf8_lossy(&req.key).into_owned();
         let value = self.data.lock().unwrap().get(&key).cloned();
         if value.is_none() {
@@ -68,7 +68,6 @@ impl RouterHandler for ReadShard {
     }
 
     fn handle_get_shared_peers_response(&self, res: &GetSharedPeersResponse) {
-        println!("handing get shared peers response (reader)");
         let mut peers = self.peers.lock().unwrap();
         *peers = res
             .peer_ips
@@ -78,6 +77,7 @@ impl RouterHandler for ReadShard {
     }
 
     fn handle_query_version_response(&self, res: &QueryVersionResponse) {
+        println!("---received version: {}", res.version);
         let mut requested_version = self.requested_version.lock().unwrap();
         *requested_version = res.version;
     }
@@ -94,6 +94,7 @@ impl RouterHandler for ReadShard {
                     String::from_utf8_lossy(&res.key).into_owned(),
                     String::from_utf8_lossy(&res.value).into_owned(),
                 );
+                println!("-- caught up key: {}, value: {}", String::from_utf8_lossy(&res.key), String::from_utf8_lossy(&res.value));
                 history.push((
                     String::from_utf8_lossy(&res.key).into_owned(),
                     String::from_utf8_lossy(&res.value).into_owned(),
@@ -245,7 +246,7 @@ async fn main() -> Result<()> {
     let router_clone_3 = read_shard_router.clone();
     tokio::spawn({
         async move {
-            let mut interval = time::interval(time::Duration::from_secs(3));
+            let mut interval = time::interval(time::Duration::from_secs(1));
             loop {
                 interval.tick().await;
 
@@ -285,6 +286,8 @@ async fn main() -> Result<()> {
                     {
                         eprintln!("Failed to send GetVersionRequest: {:?}", e);
                     }
+                } else {
+                    println!("current version: {}, requested version: {}", current_version, requested_version);
                 }
             }
         }

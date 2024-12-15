@@ -211,7 +211,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
             match peer {
                 V6(peer) => {
                     let msg_type = message.get_message_type();
-                    println!("(router) handling new message of type {:?}", msg_type);
+                    // println!("(router) handling new message of type {:?}", msg_type);
                     match message.is_request() {
                         true => {
                             match message.get_message_type() {

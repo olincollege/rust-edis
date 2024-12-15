@@ -6,6 +6,7 @@ pub fn setup_test() {
         p.name().to_str().unwrap().eq("info")
             || p.name().to_str().unwrap().eq("read_shard")
             || p.name().to_str().unwrap().eq("write_shard")
+            || p.name().to_str().unwrap().eq("client")
     });
 
     for (_, process) in ps {
@@ -20,6 +21,7 @@ pub fn test_teardown() {
         p.name().to_str().unwrap().eq("info")
             || p.name().to_str().unwrap().eq("read_shard")
             || p.name().to_str().unwrap().eq("write_shard")
+            || p.name().to_str().unwrap().eq("client")
     });
 
     for (_pid, process) in ps {

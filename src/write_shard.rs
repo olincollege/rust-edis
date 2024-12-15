@@ -65,7 +65,7 @@ impl RouterHandler for WriteShard {
         // Lock and update the version history
         let mut version_history = self.version_history.lock().unwrap();
         version_history.push((key.clone(), value.clone()));
-
+        println!("wrote key: {}, value: {}, version: {}", key, value, *current_version);
         // Create a successful response
         WriteResponse { error: 0 }
     }
@@ -97,6 +97,8 @@ impl RouterHandler for WriteShard {
     fn handle_query_version_request(&self, _req: &QueryVersionRequest) -> QueryVersionResponse {
         // Lock the current version to read its value
         let current_version = self.current_version.lock().unwrap();
+
+        println!("sent version: {}", *current_version);
 
         if *current_version > 0 {
             // Create the response with the latest version
