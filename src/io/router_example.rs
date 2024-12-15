@@ -28,23 +28,23 @@ mod test {
         /// Callback for handling new requests
         fn handle_announce_shard_request(
             &self,
-            req: &AnnounceShardRequest,
+            _req: &AnnounceShardRequest,
         ) -> AnnounceShardResponse {
             unimplemented!()
         }
 
         fn handle_get_client_shard_info_request(
             &self,
-            req: &GetClientShardInfoRequest,
+            _req: &GetClientShardInfoRequest,
         ) -> GetClientShardInfoResponse {
             unimplemented!()
         }
 
-        fn handle_query_version_request(&self, req: &QueryVersionRequest) -> QueryVersionResponse {
+        fn handle_query_version_request(&self, _req: &QueryVersionRequest) -> QueryVersionResponse {
             unimplemented!()
         }
 
-        fn handle_read_request(&self, req: &ReadRequest) -> ReadResponse {
+        fn handle_read_request(&self, _req: &ReadRequest) -> ReadResponse {
             ReadResponse {
                 value: vec![1, 2, 3, 4],
                 key: b"testkey".to_vec(),
@@ -52,27 +52,27 @@ mod test {
             }
         }
 
-        fn handle_write_request(&self, req: &WriteRequest) -> WriteResponse {
+        fn handle_write_request(&self, _req: &WriteRequest) -> WriteResponse {
             unimplemented!()
         }
 
         fn handle_get_shared_peers_request(
             &self,
-            req: &GetSharedPeersRequest,
+            _req: &GetSharedPeersRequest,
         ) -> GetSharedPeersResponse {
             unimplemented!()
         }
 
         /// Callbacks for handling responses to outbound requests
-        fn handle_announce_shard_response(&self, res: &AnnounceShardResponse) {
+        fn handle_announce_shard_response(&self, _res: &AnnounceShardResponse) {
             unimplemented!()
         }
 
-        fn handle_get_client_shard_info_response(&self, res: &GetClientShardInfoResponse) {
+        fn handle_get_client_shard_info_response(&self, _res: &GetClientShardInfoResponse) {
             unimplemented!()
         }
 
-        fn handle_query_version_response(&self, res: &QueryVersionResponse) {
+        fn handle_query_version_response(&self, _res: &QueryVersionResponse) {
             unimplemented!()
         }
 
@@ -80,24 +80,24 @@ mod test {
             self.debug_out.write().unwrap().push(res.value.clone());
         }
 
-        fn handle_write_response(&self, res: &WriteResponse) {
+        fn handle_write_response(&self, _res: &WriteResponse) {
             unimplemented!()
         }
 
-        fn handle_get_shared_peers_response(&self, res: &GetSharedPeersResponse) {
+        fn handle_get_shared_peers_response(&self, _res: &GetSharedPeersResponse) {
             unimplemented!()
         }
 
         fn handle_get_version_request(
             &self,
-            req: &crate::messages::requests::get_version_request::GetVersionRequest,
+            _req: &crate::messages::requests::get_version_request::GetVersionRequest,
         ) -> crate::messages::responses::get_version_response::GetVersionResponse {
             unimplemented!()
         }
 
         fn handle_get_version_response(
             &self,
-            res: &crate::messages::responses::get_version_response::GetVersionResponse,
+            _res: &crate::messages::responses::get_version_response::GetVersionResponse,
         ) {
             unimplemented!()
         }

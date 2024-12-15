@@ -208,37 +208,37 @@ impl RouterHandler for InfoRouter {
     }
 
     // Unused requests
-    fn handle_query_version_request(&self, req: &QueryVersionRequest) -> QueryVersionResponse {
+    fn handle_query_version_request(&self, _req: &QueryVersionRequest) -> QueryVersionResponse {
         unimplemented!()
     }
-    fn handle_read_request(&self, req: &ReadRequest) -> ReadResponse {
+    fn handle_read_request(&self, _req: &ReadRequest) -> ReadResponse {
         unimplemented!()
     }
-    fn handle_write_request(&self, req: &WriteRequest) -> WriteResponse {
+    fn handle_write_request(&self, _req: &WriteRequest) -> WriteResponse {
         unimplemented!()
     }
-    fn handle_get_version_request(&self, req: &GetVersionRequest) -> GetVersionResponse {
+    fn handle_get_version_request(&self, _req: &GetVersionRequest) -> GetVersionResponse {
         unimplemented!();
     }
 
     // Unused responses
-    fn handle_announce_shard_response(&self, res: &AnnounceShardResponse) {
+    fn handle_announce_shard_response(&self, _res: &AnnounceShardResponse) {
         unimplemented!()
     }
-    fn handle_get_client_shard_info_response(&self, res: &GetClientShardInfoResponse) {
+    fn handle_get_client_shard_info_response(&self, _res: &GetClientShardInfoResponse) {
         unimplemented!()
     }
-    fn handle_query_version_response(&self, res: &QueryVersionResponse) {
+    fn handle_query_version_response(&self, _res: &QueryVersionResponse) {
         unimplemented!()
     }
-    fn handle_read_response(&self, res: &ReadResponse) {}
-    fn handle_write_response(&self, res: &WriteResponse) {
+    fn handle_read_response(&self, _res: &ReadResponse) {}
+    fn handle_write_response(&self, _res: &WriteResponse) {
         unimplemented!()
     }
-    fn handle_get_shared_peers_response(&self, res: &GetSharedPeersResponse) {
+    fn handle_get_shared_peers_response(&self, _res: &GetSharedPeersResponse) {
         unimplemented!()
     }
-    fn handle_get_version_response(&self, res: &GetVersionResponse) {
+    fn handle_get_version_response(&self, _res: &GetVersionResponse) {
         unimplemented!()
     }
 }

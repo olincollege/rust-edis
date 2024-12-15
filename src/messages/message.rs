@@ -95,10 +95,6 @@ pub fn bytes_as_message(buffer: &[u8]) -> Result<Box<dyn MessagePayload>> {
             true => Box::new(Message::<GetVersionRequest>::deserialize(buffer)?.message_payload),
             false => Box::new(Message::<GetVersionResponse>::deserialize(buffer)?.message_payload),
         },
-        _ => {
-            println!("failed to parse");
-            return Err(anyhow::anyhow!("unsupported message type"));
-        }
     };
     Ok(result)
 }
