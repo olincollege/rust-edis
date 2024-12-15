@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod test {
-    use super::*;
+    
     use serial_test::serial;
     use std::net::{Ipv6Addr, SocketAddrV6};
     use crate::io::router::RouterHandler;

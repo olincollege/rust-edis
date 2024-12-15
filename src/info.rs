@@ -267,7 +267,7 @@ async fn main() -> Result<()> {
 mod tests {
     use rand::Rng;
     use serial_test::serial;
-    use utils::test_client::{self, TestRouterClient};
+    use utils::test_client::{TestRouterClient};
 
     use super::*;
     use std::net::{Ipv6Addr, SocketAddrV6};
