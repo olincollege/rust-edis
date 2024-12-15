@@ -104,7 +104,7 @@ mod tests {
             .stdout(predicate::str::contains("OK"));
 
         sleep(Duration::from_secs(1)).await;
-         client2
+        client2
             .write_stdin("get test_key\nexit\n")
             .assert()
             .stdout(predicate::str::contains("test_key"));
