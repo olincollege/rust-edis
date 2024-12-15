@@ -37,7 +37,7 @@ use utils::constants::MAIN_INSTANCE_IP_PORT;
 struct AnnounceInfo {
     ip: u128,
     port: u16,
-    announce_id: u128
+    announce_id: u128,
 }
 
 #[derive(Clone)]
@@ -78,8 +78,8 @@ impl RouterHandler for InfoRouter {
                     writer.port = req.port;
                     // already announced
                     return AnnounceShardResponse {
-                        writer_number: block.0 as u16
-                    }
+                        writer_number: block.0 as u16,
+                    };
                 }
             }
             for reader in block.1.readers.iter_mut() {
@@ -89,8 +89,8 @@ impl RouterHandler for InfoRouter {
                     reader.port = req.port;
                     // already announced
                     return AnnounceShardResponse {
-                        writer_number: block.0 as u16
-                    }
+                        writer_number: block.0 as u16,
+                    };
                 }
             }
         }
@@ -98,7 +98,6 @@ impl RouterHandler for InfoRouter {
         println!("handling announce shard request");
         match req.shard_type {
             ShardType::ReadShard => {
-
                 // find the writer with the smallest number of readers and attach there
                 let writer_idx = reader_writers
                     .iter()
@@ -109,7 +108,7 @@ impl RouterHandler for InfoRouter {
                 reader_writers[writer_idx].readers.push(AnnounceInfo {
                     ip: req.ip,
                     port: req.port,
-                    announce_id: req.shard_id
+                    announce_id: req.shard_id,
                 });
 
                 AnnounceShardResponse {
@@ -131,7 +130,7 @@ impl RouterHandler for InfoRouter {
                         reader_writers[idx].writer = Some(AnnounceInfo {
                             ip: req.ip,
                             port: req.port,
-                            announce_id: req.shard_id
+                            announce_id: req.shard_id,
                         });
                         AnnounceShardResponse {
                             writer_number: idx as u16,
