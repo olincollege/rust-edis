@@ -65,6 +65,7 @@ mod tests {
         r
     }
 
+    #[serial]
     #[tokio::test]
     async fn test_set_command_integration() -> Result<()> {
         // Start the info server
@@ -97,7 +98,7 @@ mod tests {
 
         sleep(Duration::from_secs(1)).await;
         client
-            .write_stdin("set test_key test_value\n")
+            .write_stdin("set test_key test_value\nexit\n")
             .assert()
             .stdout(predicate::str::contains("OK"));
 
