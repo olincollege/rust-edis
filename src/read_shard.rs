@@ -10,8 +10,10 @@ use std::collections::HashMap;
 use std::net::{Ipv6Addr, SocketAddrV6};
 use std::sync::{Arc, Mutex};
 use tokio::time;
+mod integration;
 mod io;
 mod messages;
+mod utils;
 use crate::messages::{
     requests::{
         announce_shard_request::{AnnounceMessageType, AnnounceShardRequest},
@@ -27,8 +29,7 @@ use crate::messages::{
         read_response::ReadResponse,
     },
 };
-
-static MAIN_INSTANCE_IP_PORT: SocketAddrV6 = SocketAddrV6::new(Ipv6Addr::LOCALHOST, 8080, 0, 0);
+use crate::utils::constants::MAIN_INSTANCE_IP_PORT;
 
 #[derive(Clone, Debug)]
 pub struct ReadShard {
@@ -42,6 +43,7 @@ pub struct ReadShard {
 
 impl RouterHandler for ReadShard {
     fn handle_announce_shard_response(&self, res: &AnnounceShardResponse) {
+        println!("handing announce shard response (reader)");
         let writer_number = res.writer_number;
         let mut writer_id = self.writer_id.lock().unwrap();
         *writer_id = writer_number;
@@ -66,6 +68,7 @@ impl RouterHandler for ReadShard {
     }
 
     fn handle_get_shared_peers_response(&self, res: &GetSharedPeersResponse) {
+        println!("handing get shared peers response (reader)");
         let mut peers = self.peers.lock().unwrap();
         *peers = res
             .peer_ips
@@ -182,25 +185,13 @@ async fn main() -> Result<()> {
     let read_shard_router = read_shard_server.get_handler_arc();
     let reader_ip_port = read_shard_server.bind().await?;
 
-    let client0 = read_shard_server.get_router_client();
-    tokio::spawn(async move {
-        let announce_request = AnnounceShardRequest {
-            shard_type: ShardType::ReadShard,
-            message_type: AnnounceMessageType::NewAnnounce as u8,
-            ip: reader_ip_port.ip().to_bits(),
-            port: reader_ip_port.port(),
-        };
+    println!("hi from read shard!");
 
-        if let Err(e) = client0
-            .queue_request::<AnnounceShardRequest>(announce_request, MAIN_INSTANCE_IP_PORT)
-            .await
-        {
-            eprintln!("Failed to send AnnounceShardRequest: {:?}", e);
-        }
-    });
+    let client0 = read_shard_server.get_router_client();
 
     let client1 = read_shard_server.get_router_client();
     tokio::spawn(async move {
+        println!("hi from read shard loop");
         let mut interval = time::interval(time::Duration::from_secs(3));
         loop {
             interval.tick().await;
@@ -212,6 +203,7 @@ async fn main() -> Result<()> {
                 port: reader_ip_port.port(),
             };
 
+            println!("sending announce shard request from read");
             if let Err(e) = client1
                 .queue_request::<AnnounceShardRequest>(announce_request, MAIN_INSTANCE_IP_PORT)
                 .await
@@ -228,6 +220,8 @@ async fn main() -> Result<()> {
             let mut interval = time::interval(time::Duration::from_secs(3));
             loop {
                 interval.tick().await;
+
+                println!("sending shared peers request (reader)");
 
                 let get_peers_request = GetSharedPeersRequest {
                     writer_number: router_clone_2.writer_id.lock().unwrap().clone(),
@@ -297,10 +291,12 @@ async fn main() -> Result<()> {
     });
 
     tokio::spawn(async move {
+        println!("hi from read shard listen block");
         if let Err(e) = read_shard_server.listen().await {
             eprintln!("Server failed: {:?}", e);
         }
-    });
+    })
+    .await?;
 
     Ok(())
 }

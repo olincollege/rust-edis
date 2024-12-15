@@ -5,7 +5,9 @@ use std::collections::HashMap;
 use std::net::{Ipv6Addr, SocketAddrV6};
 use std::sync::{Arc, Mutex};
 use tokio::time;
+mod integration;
 mod messages;
+mod utils;
 use crate::messages::{
     requests::{
         announce_shard_request::AnnounceShardRequest,
@@ -132,7 +134,7 @@ impl RouterHandler for WriteShard {
 
     /// Callbacks for handling responses to outbound requests
     fn handle_announce_shard_response(&self, _res: &AnnounceShardResponse) {
-        unimplemented!()
+        // nothing to do
     }
 
     fn handle_get_client_shard_info_response(&self, _res: &GetClientShardInfoResponse) {
@@ -167,21 +169,6 @@ async fn main() -> Result<()> {
     let writer_ip_port = write_shard_server.bind().await?;
 
     let client0 = write_shard_server.get_router_client();
-    tokio::spawn(async move {
-        let announce_request = AnnounceShardRequest {
-            shard_type: ShardType::WriteShard,
-            message_type: AnnounceMessageType::NewAnnounce as u8,
-            ip: writer_ip_port.ip().to_bits(),
-            port: writer_ip_port.port(),
-        };
-
-        if let Err(e) = client0
-            .queue_request::<AnnounceShardRequest>(announce_request, MAIN_INSTANCE_IP_PORT)
-            .await
-        {
-            eprintln!("Failed to send AnnounceShardRequest: {:?}", e);
-        }
-    });
 
     let client1 = write_shard_server.get_router_client();
     tokio::spawn(async move {
@@ -209,7 +196,8 @@ async fn main() -> Result<()> {
         if let Err(e) = write_shard_server.listen().await {
             eprintln!("Server failed: {:?}", e);
         }
-    });
+    })
+    .await?;
 
     Ok(())
 }
