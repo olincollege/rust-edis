@@ -1,7 +1,7 @@
+pub mod integration;
 pub mod io;
 pub mod messages;
 pub mod utils;
-pub mod integration;
 
 use std::mem::uninitialized;
 
@@ -28,10 +28,10 @@ use messages::responses::write_response::WriteResponse;
 
 use anyhow::Result;
 use rand::seq::SliceRandom;
-use utils::constants::MAIN_INSTANCE_IP_PORT;
 use std::sync::{Arc, Mutex};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
+use utils::constants::MAIN_INSTANCE_IP_PORT;
 
 #[derive(Clone)]
 struct ReaderWriterBlock {
@@ -209,8 +209,8 @@ impl RouterHandler for InfoRouter {
 
 #[derive(Parser, Debug)]
 pub struct InfoArgs {
-    #[arg(long, default_value_t = 4)] 
-    write_shards: u16
+    #[arg(long, default_value_t = 4)]
+    write_shards: u16,
 }
 
 #[tokio::main]
@@ -229,7 +229,7 @@ async fn main() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use messages::requests::announce_shard_request::AnnounceMessageType;
-    use rust_edis::integration::test_setup; 
+    use rust_edis::integration::test_setup;
     use serial_test::serial;
     use utils::test_client::{self, TestRouterClient};
 

@@ -10,10 +10,10 @@ use std::collections::HashMap;
 use std::net::{Ipv6Addr, SocketAddrV6};
 use std::sync::{Arc, Mutex};
 use tokio::time;
+mod integration;
 mod io;
 mod messages;
 mod utils;
-mod integration;
 use crate::messages::{
     requests::{
         announce_shard_request::{AnnounceMessageType, AnnounceShardRequest},
@@ -30,7 +30,6 @@ use crate::messages::{
     },
 };
 use crate::utils::constants::MAIN_INSTANCE_IP_PORT;
-
 
 #[derive(Clone, Debug)]
 pub struct ReadShard {
@@ -317,7 +316,8 @@ async fn main() -> Result<()> {
         if let Err(e) = read_shard_server.listen().await {
             eprintln!("Server failed: {:?}", e);
         }
-    }).await?;
+    })
+    .await?;
 
     Ok(())
 }

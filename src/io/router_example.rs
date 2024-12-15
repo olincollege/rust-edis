@@ -104,13 +104,14 @@ mod test {
     };
 
     use crate::{
-        integration::test_setup, io::{router::RouterBuilder, router_example::ExampleRouterHandler}, messages::requests::{
+        integration::test_setup,
+        io::{router::RouterBuilder, router_example::ExampleRouterHandler},
+        messages::requests::{
             query_version_request::QueryVersionRequest, read_request::ReadRequest,
-        } 
+        },
     };
     use anyhow::{Ok, Result};
     use serial_test::serial;
-
 
     #[serial]
     #[tokio::test]

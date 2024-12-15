@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use std::net::{Ipv6Addr, SocketAddrV6};
 use std::sync::{Arc, Mutex};
 use tokio::time;
-mod messages;
 mod integration;
+mod messages;
 mod utils;
 use crate::messages::{
     requests::{
@@ -211,7 +211,8 @@ async fn main() -> Result<()> {
         if let Err(e) = write_shard_server.listen().await {
             eprintln!("Server failed: {:?}", e);
         }
-    }).await?;
+    })
+    .await?;
 
     Ok(())
 }

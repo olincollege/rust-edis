@@ -208,7 +208,6 @@ impl<H: RouterHandler> RouterBuilder<H> {
             let message = read_message(&mut read).await?;
             let peer = read.peer_addr()?;
 
-
             match peer {
                 V6(peer) => {
                     let msg_type = message.get_message_type();
