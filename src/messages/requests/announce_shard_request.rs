@@ -9,13 +9,6 @@ pub enum ShardType {
     WriteShard = 1,
 }
 
-#[repr(u8)]
-#[derive(Debug, Clone, Copy, IntEnum, PartialEq, Eq)]
-pub enum AnnounceMessageType {
-    NewAnnounce = 0,
-    ReAnnounce = 1,
-}
-
 pub struct AnnounceShardRequest {
     pub shard_type: ShardType,
     pub shard_id: u128,
