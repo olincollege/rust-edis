@@ -1,6 +1,7 @@
 use anyhow::Result;
 use io::write;
-use messages::requests::announce_shard_request::{AnnounceMessageType, ShardType};
+use messages::requests::announce_shard_request::ShardType;
+use rand::Rng;
 use std::collections::HashMap;
 use std::net::{Ipv6Addr, SocketAddrV6};
 use std::sync::{Arc, Mutex};
@@ -168,7 +169,7 @@ async fn main() -> Result<()> {
     let mut write_shard_server = RouterBuilder::new(write_shard_router, None);
     let writer_ip_port = write_shard_server.bind().await?;
 
-    let client0 = write_shard_server.get_router_client();
+    let shard_id: u128 = rand::thread_rng().gen();
 
     let client1 = write_shard_server.get_router_client();
     tokio::spawn(async move {
@@ -178,7 +179,7 @@ async fn main() -> Result<()> {
 
             let announce_request = AnnounceShardRequest {
                 shard_type: ShardType::WriteShard,
-                message_type: AnnounceMessageType::ReAnnounce as u8,
+                shard_id: shard_id,
                 ip: writer_ip_port.ip().to_bits(),
                 port: writer_ip_port.port(),
             };

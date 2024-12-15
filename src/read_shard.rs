@@ -16,11 +16,9 @@ mod messages;
 mod utils;
 use crate::messages::{
     requests::{
-        announce_shard_request::{AnnounceMessageType, AnnounceShardRequest},
-        get_shared_peers_request::GetSharedPeersRequest,
-        get_version_request::GetVersionRequest,
-        query_version_request::QueryVersionRequest,
-        read_request::ReadRequest,
+        announce_shard_request::AnnounceShardRequest,
+        get_shared_peers_request::GetSharedPeersRequest, get_version_request::GetVersionRequest,
+        query_version_request::QueryVersionRequest, read_request::ReadRequest,
     },
     responses::{
         announce_shard_response::AnnounceShardResponse,
@@ -187,7 +185,7 @@ async fn main() -> Result<()> {
 
     println!("hi from read shard!");
 
-    let client0 = read_shard_server.get_router_client();
+    let shard_id = rand::thread_rng().gen();
 
     let client1 = read_shard_server.get_router_client();
     tokio::spawn(async move {
@@ -198,7 +196,7 @@ async fn main() -> Result<()> {
 
             let announce_request = AnnounceShardRequest {
                 shard_type: ShardType::ReadShard,
-                message_type: AnnounceMessageType::ReAnnounce as u8,
+                shard_id,
                 ip: reader_ip_port.ip().to_bits(),
                 port: reader_ip_port.port(),
             };
