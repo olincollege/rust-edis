@@ -17,22 +17,16 @@ use crate::messages::{
         read_response::ReadResponse, write_response::WriteResponse,
     },
 };
-use anyhow::{anyhow, Ok, Result};
+use anyhow::{Ok, Result};
 use async_recursion::async_recursion;
 use scc::HashMap;
-use std::future::IntoFuture;
 use std::net::SocketAddr::{V4, V6};
 use std::net::{Ipv6Addr, SocketAddrV6};
-use std::{cell::RefCell, sync::Arc};
-use tokio::{
-    io::{AsyncReadExt, Interest},
-    net::{
-        tcp::{OwnedReadHalf, OwnedWriteHalf, ReadHalf, WriteHalf},
-        unix::SocketAddr,
+use std::sync::Arc;
+use tokio::net::{
+        tcp::OwnedReadHalf,
         TcpListener, TcpStream,
-    },
-    task::JoinHandle,
-};
+    };
 
 use super::read::read_message;
 

@@ -1,5 +1,4 @@
 use anyhow::Result;
-use io::write;
 use messages::requests::announce_shard_request::ShardType;
 use rand::Rng;
 use std::collections::HashMap;

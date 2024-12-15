@@ -1,8 +1,7 @@
 use anyhow::Result;
-use async_smux::MuxStream;
 use tokio::{
     io::AsyncReadExt,
-    net::{tcp::OwnedReadHalf, TcpStream},
+    net::tcp::OwnedReadHalf,
 };
 
 use crate::messages::message::{bytes_as_message, MessagePayload};
