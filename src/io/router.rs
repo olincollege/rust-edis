@@ -1,5 +1,5 @@
 use crate::io::write::write_message;
-use crate::messages::message::{AsAny, Message};
+use crate::messages::message::Message;
 use crate::messages::requests::get_shared_peers_request::GetSharedPeersRequest;
 use crate::messages::responses::get_shared_peers_response::GetSharedPeersResponse;
 use crate::messages::{
@@ -129,6 +129,7 @@ impl<H: RouterHandler> RouterBuilder<H> {
         }
     }
 
+    #[allow(unused)]
     pub fn get_handler_arc(&self) -> Arc<H> {
         self.handler.clone()
     }
@@ -201,8 +202,6 @@ impl<H: RouterHandler> RouterBuilder<H> {
 
             match peer {
                 V6(peer) => {
-                    let msg_type = message.get_message_type();
-                    // println!("(router) handling new message of type {:?}", msg_type);
                     match message.is_request() {
                         true => {
                             match message.get_message_type() {

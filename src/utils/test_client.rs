@@ -19,6 +19,7 @@ use crate::messages::{
 };
 
 /// A helper struct to use in testing. It stores any outbound responses so they can be asserted in unit tests
+#[allow(unused)]
 pub struct TestRouterClient {
     pub query_version_responses: Arc<Mutex<Vec<QueryVersionResponse>>>,
     pub announce_shard_responses: Arc<Mutex<Vec<AnnounceShardResponse>>>,
@@ -30,6 +31,7 @@ pub struct TestRouterClient {
     router: RouterBuilder<TestRouterClientHandler>,
 }
 
+#[allow(unused)]
 impl TestRouterClient {
     pub fn new() -> Self {
         let query_version_responses = Arc::new(Mutex::new(Vec::new()));
@@ -75,46 +77,46 @@ pub struct TestRouterClientHandler {
 }
 
 impl RouterHandler for TestRouterClientHandler {
-    fn handle_announce_shard_request(&self, req: &AnnounceShardRequest) -> AnnounceShardResponse {
+    fn handle_announce_shard_request(&self, _req: &AnnounceShardRequest) -> AnnounceShardResponse {
         unimplemented!()
     }
 
     fn handle_get_client_shard_info_request(
         &self,
-        req: &GetClientShardInfoRequest,
+        _req: &GetClientShardInfoRequest,
     ) -> GetClientShardInfoResponse {
         unimplemented!()
     }
 
-    fn handle_query_version_request(&self, req: &QueryVersionRequest) -> QueryVersionResponse {
+    fn handle_query_version_request(&self, _req: &QueryVersionRequest) -> QueryVersionResponse {
         unimplemented!()
     }
 
-    fn handle_read_request(&self, req: &ReadRequest) -> ReadResponse {
+    fn handle_read_request(&self, _req: &ReadRequest) -> ReadResponse {
         unimplemented!()
     }
 
-    fn handle_write_request(&self, req: &WriteRequest) -> WriteResponse {
+    fn handle_write_request(&self, _req: &WriteRequest) -> WriteResponse {
         unimplemented!()
     }
 
     fn handle_get_shared_peers_request(
         &self,
-        req: &GetSharedPeersRequest,
+        _req: &GetSharedPeersRequest,
     ) -> GetSharedPeersResponse {
         unimplemented!()
     }
 
     fn handle_get_version_request(
         &self,
-        req: &crate::messages::requests::get_version_request::GetVersionRequest,
+        _req: &crate::messages::requests::get_version_request::GetVersionRequest,
     ) -> crate::messages::responses::get_version_response::GetVersionResponse {
         unimplemented!()
     }
 
     fn handle_get_version_response(
         &self,
-        res: &crate::messages::responses::get_version_response::GetVersionResponse,
+        _res: &crate::messages::responses::get_version_response::GetVersionResponse,
     ) {
         unimplemented!()
     }
