@@ -188,21 +188,6 @@ async fn main() -> Result<()> {
     println!("hi from read shard!");
 
     let client0 = read_shard_server.get_router_client();
-    tokio::spawn(async move {
-        println!("sending announce shard request from read");
-        let announce_request = AnnounceShardRequest {
-            shard_type: ShardType::ReadShard,
-            message_type: AnnounceMessageType::NewAnnounce as u8,
-            ip: reader_ip_port.ip().to_bits(),
-            port: reader_ip_port.port(),
-        };
-        if let Err(e) = client0
-            .queue_request::<AnnounceShardRequest>(announce_request, MAIN_INSTANCE_IP_PORT)
-            .await
-        {
-            eprintln!("Failed to send AnnounceShardRequest: {:?}", e);
-        }
-    });
 
     let client1 = read_shard_server.get_router_client();
     tokio::spawn(async move {
