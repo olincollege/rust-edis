@@ -27,16 +27,16 @@ mod tests {
         // the output is really noisy unless we need it for debugging
         info_cmd
             .arg("--write-shards=1")
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
+            .stdout(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::inherit())
             .spawn()?;
         read_cmd
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
+            .stdout(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::inherit())
             .spawn()?;
         write_cmd
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
+            .stdout(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::inherit())
             .spawn()?;
         tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
