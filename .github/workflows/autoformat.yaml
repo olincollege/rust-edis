@@ -46,3 +46,60 @@ jobs:
         run: |
           git commit -am "Cargo Autofix Changes"
           git push
+
+
+      - name: Cargo Autofix Write Shard
+        run: |
+          cargo clippy --fix --bin "write_shard"
+          
+      - name: Check for modified files
+        id: git-check3
+        run: echo "modified=$(if git diff-index --quiet HEAD --; then echo "false"; else echo "true"; fi)" >> $GITHUB_OUTPUT
+      - name: Push changes
+        if: steps.git-check3.outputs.modified == 'true'
+        run: |
+          git commit -am "Cargo Autofix write_shard Bin"
+          git push
+
+      - name: Cargo Autofix Read Shard
+        run: |
+          cargo clippy --fix --bin "read_shard"
+          
+      - name: Check for modified files
+        id: git-check4
+        run: echo "modified=$(if git diff-index --quiet HEAD --; then echo "false"; else echo "true"; fi)" >> $GITHUB_OUTPUT
+      - name: Push changes
+        if: steps.git-check4.outputs.modified == 'true'
+        run: |
+          git commit -am "Cargo Autofix read_shard Bin"
+          git push
+
+
+      - name: Cargo Autofix Info
+        run: |
+          cargo clippy --fix --bin "read_shard"
+          
+      - name: Check for modified files
+        id: git-check5
+        run: echo "modified=$(if git diff-index --quiet HEAD --; then echo "false"; else echo "true"; fi)" >> $GITHUB_OUTPUT
+      - name: Push changes
+        if: steps.git-check5.outputs.modified == 'true'
+        run: |
+          git commit -am "Cargo Autofix info Bin"
+          git push
+
+
+      - name: Cargo Autofix Client
+        run: |
+          cargo clippy --fix --bin "client"
+          
+      - name: Check for modified files
+        id: git-check6
+        run: echo "modified=$(if git diff-index --quiet HEAD --; then echo "false"; else echo "true"; fi)" >> $GITHUB_OUTPUT
+      - name: Push changes
+        if: steps.git-check6.outputs.modified == 'true'
+        run: |
+          git commit -am "Cargo Autofix client Bin"
+          git push
+
+
