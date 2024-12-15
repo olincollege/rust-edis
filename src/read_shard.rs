@@ -54,22 +54,16 @@ impl RouterHandler for ReadShard {
         let key = String::from_utf8_lossy(&req.key).into_owned();
         let value = self.data.lock().unwrap().get(&key).cloned();
         match value {
-            Some(value) => {
-            ReadResponse {
+            Some(value) => ReadResponse {
                 error: 0,
                 key: req.key.clone(),
                 value: value.into_bytes(),
-            }
- 
-            }
-            None => {
-            ReadResponse {
+            },
+            None => ReadResponse {
                 error: 1,
                 key: req.key.clone(),
                 value: Vec::new(),
-            }
- 
-            }
+            },
         }
     }
 
