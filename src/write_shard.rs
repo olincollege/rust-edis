@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use tokio::time;
 mod messages;
 mod integration;
+mod utils;
 use crate::messages::{
     requests::{
         announce_shard_request::AnnounceShardRequest,

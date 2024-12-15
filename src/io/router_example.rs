@@ -104,7 +104,7 @@ mod test {
     };
 
     use crate::{
-        io::{router::RouterBuilder, router_example::ExampleRouterHandler}, messages::requests::{
+        integration::test_setup, io::{router::RouterBuilder, router_example::ExampleRouterHandler}, messages::requests::{
             query_version_request::QueryVersionRequest, read_request::ReadRequest,
         } 
     };
