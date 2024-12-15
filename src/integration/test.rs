@@ -94,13 +94,20 @@ mod tests {
         sleep(Duration::from_secs(5)).await;
 
         // Test the client binary with a set command
-        let mut client = assert_cmd::Command::cargo_bin("client")?;
+        let mut client1 = assert_cmd::Command::cargo_bin("client")?;
+        let mut client2 = assert_cmd::Command::cargo_bin("client")?;
 
         sleep(Duration::from_secs(1)).await;
-        client
+        client1
             .write_stdin("set test_key test_value\nexit\n")
             .assert()
             .stdout(predicate::str::contains("OK"));
+
+        sleep(Duration::from_secs(1)).await;
+        client2
+            .write_stdin("get test_key\nexit\n")
+            .assert()
+            .stdout(predicate::str::contains("test_key"));
 
         Ok(())
     }

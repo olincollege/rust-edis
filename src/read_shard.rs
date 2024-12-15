@@ -197,8 +197,7 @@ async fn main() -> Result<()> {
 
     let client1 = read_shard_server.get_router_client();
     tokio::spawn(async move {
-        println!("hi from read shard loop");
-        let mut interval = time::interval(time::Duration::from_secs(3));
+        let mut interval = time::interval(time::Duration::from_secs(1));
         loop {
             interval.tick().await;
 
@@ -223,7 +222,7 @@ async fn main() -> Result<()> {
     let client2 = read_shard_server.get_router_client();
     tokio::spawn({
         async move {
-            let mut interval = time::interval(time::Duration::from_millis(100));
+            let mut interval = time::interval(time::Duration::from_secs(1));
             loop {
                 interval.tick().await;
 
@@ -251,7 +250,7 @@ async fn main() -> Result<()> {
     let router_clone_3 = read_shard_router.clone();
     tokio::spawn({
         async move {
-            let mut interval = time::interval(time::Duration::from_secs(1));
+            let mut interval = time::interval(time::Duration::from_millis(100));
             loop {
                 interval.tick().await;
 
