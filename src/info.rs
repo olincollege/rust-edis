@@ -1,11 +1,13 @@
 pub mod io;
 pub mod messages;
 pub mod utils;
+pub mod test;
 
 use std::mem::uninitialized;
 
 use crate::io::router::{RouterBuilder, RouterHandler};
 
+use clap::{Args, Parser};
 use messages::requests::announce_shard_request::{AnnounceShardRequest, ShardType};
 use messages::requests::get_client_shard_info_request::GetClientShardInfoRequest;
 use messages::requests::get_shared_peers_request::GetSharedPeersRequest;
@@ -26,6 +28,7 @@ use messages::responses::write_response::WriteResponse;
 
 use anyhow::Result;
 use rand::seq::SliceRandom;
+use utils::constants::MAIN_INSTANCE_IP_PORT;
 use std::sync::{Arc, Mutex};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
@@ -57,6 +60,7 @@ impl InfoRouter {
 impl RouterHandler for InfoRouter {
     /// Callback for handling new requests
     fn handle_announce_shard_request(&self, req: &AnnounceShardRequest) -> AnnounceShardResponse {
+        println!("handling announce shard request");
         match req.shard_type {
             ShardType::ReadShard => {
                 let mut reader_writers = self.reader_writers.lock().unwrap();
@@ -201,10 +205,17 @@ impl RouterHandler for InfoRouter {
     }
 }
 
+#[derive(Parser, Debug)]
+pub struct InfoArgs {
+    #[arg(long, default_value_t = 4)] 
+    write_shards: u16
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
-    let info_router = InfoRouter::new(4);
-    let mut info_server = RouterBuilder::new(info_router, None);
+    let args = InfoArgs::parse();
+    let info_router = InfoRouter::new(args.write_shards);
+    let mut info_server = RouterBuilder::new(info_router, Some(MAIN_INSTANCE_IP_PORT));
     tokio::spawn(async move {
         info_server.bind().await?;
         info_server.listen().await?;
