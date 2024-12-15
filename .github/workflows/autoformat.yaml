@@ -77,7 +77,7 @@ jobs:
 
       - name: Cargo Autofix Info
         run: |
-          cargo clippy --fix --bin "read_shard"
+          cargo clippy --fix --bin "info"
           
       - name: Check for modified files
         id: git-check5
