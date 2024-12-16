@@ -4,6 +4,14 @@
 
 **Rust-EDIS** implements a scalable, distributed key-value store based on the **Reader/Writer Shard Model**, inspired by Redis. The system enables efficient data storage, fault tolerance, and high scalability, making it ideal for applications requiring dynamic scaling and consistent performance.
 
+## Demo video
+
+[rustedis.mov](https://github.com/olincollege/rust-edis/blob/main/docs/rustedis.mov)
+<video autoplay loop src="https://github.com/user-attachments/assets/c65dba8a-dd01-4ea6-b8cb-7fc4d305a90e" controls="controls" muted="muted" playsinline="playsinline"></video>
+
+
+
+
 ## Features
 
 - **Write Shards:** Isolated shards handle key-value pairs using deterministic hashing to maintain consistency.
