@@ -269,7 +269,7 @@ async fn main() -> Result<()> {
                     reader
                         .timestamp
                         .elapsed()
-                        .map(|elapsed| elapsed.as_secs() < 2)
+                        .map(|elapsed| elapsed.as_secs() < 5)
                         .unwrap_or(false)
                 });
             });
