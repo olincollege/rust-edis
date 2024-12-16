@@ -298,7 +298,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_shard_attachment() {
-        crate::integration::test_setup::setup_test();
+        crate::integration::test_setup::setup_test().await;
 
         let test_router_client = TestRouterClient::new();
         let test_client = test_router_client.get_client();
@@ -416,5 +416,7 @@ mod tests {
             client_shard_info_responses[0].read_shard_info.len(),
             write_shards as usize
         );
+
+        crate::integration::test_setup::test_teardown().await;
     }
 }

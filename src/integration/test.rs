@@ -20,7 +20,7 @@ mod tests {
     #[serial]
     async fn test_basic_integration() -> Result<()> {
         let r: Result<()> = {
-            test_setup::setup_test();
+            test_setup::setup_test().await;
 
             // start everything
             let mut info_cmd = Command::cargo_bin("info")?;
@@ -61,7 +61,7 @@ mod tests {
             Ok(())
         };
 
-        test_setup::test_teardown();
+        test_setup::test_teardown().await;
         r
     }
 
