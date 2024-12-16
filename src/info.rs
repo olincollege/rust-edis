@@ -72,9 +72,10 @@ impl RouterHandler for InfoRouter {
         for block in reader_writers.iter_mut().enumerate() {
             if let Some(writer) = &mut block.1.writer {
                 if writer.announce_id == req.shard_id {
-                    // update ip/port
+                    // update ip/port and refresh timestamp
                     writer.ip = req.ip;
                     writer.port = req.port;
+                    writer.timestamp = SystemTime::now();
                     // already announced
                     return AnnounceShardResponse {
                         writer_number: block.0 as u16,
@@ -83,9 +84,10 @@ impl RouterHandler for InfoRouter {
             }
             for reader in block.1.readers.iter_mut() {
                 if reader.announce_id == req.shard_id {
-                    // update ip/port
+                    // update ip/port and refresh timestamp
                     reader.ip = req.ip;
                     reader.port = req.port;
+                    writer.timestamp = SystemTime::now();
                     // already announced
                     return AnnounceShardResponse {
                         writer_number: block.0 as u16,
