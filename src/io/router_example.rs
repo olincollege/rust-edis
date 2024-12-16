@@ -106,7 +106,7 @@ mod test {
     #[tokio::test]
     #[serial]
     async fn test_example_router() -> Result<()> {
-        test_setup::setup_test();
+        test_setup::setup_test().await;
 
         let debug_out1: Arc<RwLock<Vec<Vec<u8>>>> = Arc::new(RwLock::new(Vec::new()));
         let debug_out2: Arc<RwLock<Vec<Vec<u8>>>> = Arc::new(RwLock::new(Vec::new()));
@@ -151,6 +151,8 @@ mod test {
             *debug_out1,
             vec![vec![1, 2, 3, 4], vec![1, 2, 3, 4], vec![1, 2, 3, 4]]
         );
+
+        test_setup::test_teardown().await;
         Ok(())
     }
 }
