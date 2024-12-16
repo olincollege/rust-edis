@@ -19,7 +19,7 @@ async fn kill_dangling() {
 #[cfg(test)]
 pub async fn setup_test() {
     kill_dangling().await
- }
+}
 
 #[cfg(test)]
 pub async fn test_teardown() {
