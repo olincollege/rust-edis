@@ -7,6 +7,10 @@
 ## Demo video
 
 [rustedis.mov](https://github.com/olincollege/rust-edis/blob/main/docs/rustedis.mov)
+<video autoplay loop src="https://github.com/user-attachments/assets/c65dba8a-dd01-4ea6-b8cb-7fc4d305a90e" controls="controls" muted="muted" playsinline="playsinline"></video>
+
+
+
 
 ## Features
 
