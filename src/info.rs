@@ -87,7 +87,7 @@ impl RouterHandler for InfoRouter {
                     // update ip/port and refresh timestamp
                     reader.ip = req.ip;
                     reader.port = req.port;
-                    writer.timestamp = SystemTime::now();
+                    reader.timestamp = SystemTime::now();
                     // already announced
                     return AnnounceShardResponse {
                         writer_number: block.0 as u16,
